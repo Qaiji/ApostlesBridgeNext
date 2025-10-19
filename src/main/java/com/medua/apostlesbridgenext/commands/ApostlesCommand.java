@@ -48,6 +48,12 @@ public class ApostlesCommand {
                                 proceedCommand(apostlesBridge, alias, new String[]{"status"});
                                 return 1;
                             }))
+                        // /bridge disconnect
+                        .then(ClientCommandManager.literal("disconnect")
+                                .executes(context -> {
+                                    proceedCommand(apostlesBridge, alias, new String[]{"disconnect"});
+                                    return 1;
+                                }))
                         // /bridge ignore <add|remove|list> [player|origin] [name]
                         .then(ClientCommandManager.literal("ignore")
                             .then(ClientCommandManager.literal("add")
@@ -146,7 +152,11 @@ public class ApostlesCommand {
         } else if (args.length == 1) {
             if (args[0].equalsIgnoreCase("reconnect")) {
                 MessageHandler.sendMessage("Restarting WebSocket and clearing session");
-                apostlesBridge.getWebSocketHandler().restartWebSocket(true);
+                apostlesBridge.getWebSocketHandler().restartWebSocket();
+                return true;
+            } else if (args[0].equalsIgnoreCase("disconnect")) {
+                MessageHandler.sendMessage("Disconnecting WebSocket and clearing session");
+                apostlesBridge.getWebSocketHandler().disconnectWebSocket();
                 return true;
             } else if (args[0].equalsIgnoreCase("status")) {
                 MessageHandler.sendMessage("WebSocket connection: "+apostlesBridge.getWebSocketHandler().getStatus());
@@ -166,7 +176,6 @@ public class ApostlesCommand {
         } else if (args.length == 2) {
             if (args[0].equalsIgnoreCase("ignore")) {
                 if (args[1].equalsIgnoreCase("list")) {
-
                     List<String> playerNames = Config.getIgnoredListNames(IgnoredType.PLAYER);
                     List<String> originNames = Config.getIgnoredListNames(IgnoredType.ORIGIN);
                     if (playerNames.isEmpty() && originNames.isEmpty()) {

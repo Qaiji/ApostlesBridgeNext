@@ -123,10 +123,10 @@ public class ConfigFormattingScreen extends Screen {
         int formatWidth = (int)(textRenderer.getWidth(formattingHeader) * tinyHeaderScale);
         int formatX = (int)((float)width / 2 - formatWidth / 2);
         int formatY = (int)(height / 2 - (float)totalHeight / 2 + 10);
-        context.getMatrices().push();
-        context.getMatrices().scale(tinyHeaderScale, tinyHeaderScale, tinyHeaderScale);
+        context.getMatrices().pushMatrix();
+        context.getMatrices().scale(tinyHeaderScale, tinyHeaderScale);
         context.drawText(textRenderer, formattingHeader, (int)(formatX / tinyHeaderScale), (int)(formatY / tinyHeaderScale), 0xA0A0A0, false);
-        context.getMatrices().pop();
+        context.getMatrices().popMatrix();
 
         int textPosition = height / 2 - totalHeight / 2 + headerMarginBottom + fieldSpacingHeight;
         context.drawText(textRenderer, "Colors:", width / 2 - 110, textPosition, 0xA0A0A0, false);

@@ -11,7 +11,7 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 public class ApostlesBridgeNextClient implements ClientModInitializer {
 
     public static final String MODID = "apostlesbridgenext";
-    public static final String VERSION = "0.1.1-BETA";
+    public static final String VERSION = "0.10.1-BETA";
 
     private static final LogHandler LOGGER = new LogHandler(ApostlesBridgeNextClient.class);
     private WebSocketHandler webSocketHandler;

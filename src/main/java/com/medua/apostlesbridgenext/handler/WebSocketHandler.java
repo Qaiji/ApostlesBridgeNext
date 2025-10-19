@@ -28,6 +28,8 @@ public class WebSocketHandler {
     private static final int RECONNECT_DELAY = 30_000;
     private boolean reconnectScheduled = false;
 
+    private boolean forceDisconnected = false;
+
     private String authKey = "";
 
     ApostlesBridgeNextClient apostlesBridge;
@@ -121,7 +123,9 @@ public class WebSocketHandler {
                                         outputMessage = outputMessage.replace("%messageColor%", Config.getFormattingColors().getMessageColor());
                                     }
 
-                                    MessageHandler.sendMessageWithImages(outputMessage, false, imageList);
+                                    MinecraftClient client = MinecraftClient.getInstance();
+                                    String finalOutputMessage = outputMessage;
+                                    client.execute(() -> MessageHandler.sendMessageWithImages(finalOutputMessage, false, imageList));
                                 }
                             }
                         }
@@ -155,6 +159,10 @@ public class WebSocketHandler {
     private boolean shouldConnect() {
         if (webSocketClient != null && webSocketClient.isOpen()) {
             LOGGER.debug("Reconnect skipped: WebSocket is already connected.");
+            return false;
+        }
+        if (forceDisconnected) {
+            LOGGER.debug("Reconnect skipped: WebSocket force disconnected.");
             return false;
         }
 
@@ -239,10 +247,34 @@ public class WebSocketHandler {
             webSocketClient.close();
         }
 
+        if (this.forceDisconnected) {
+            this.forceDisconnected = false;
+        }
+
         if (shouldConnect()) {
             connect();
         } else {
             LOGGER.debug("Restart skipped due to mode restrictions.");
         }
+    }
+
+    public synchronized void disconnectWebSocket() {
+        this.disconnectWebSocket(false);
+    }
+
+    public synchronized void disconnectWebSocket(boolean clearSession) {
+        if (clearSession) {
+            authKey = "";
+        }
+
+        if (reconnectTimer != null) {
+            reconnectTimer.cancel();
+        }
+
+        if (webSocketClient != null && webSocketClient.isOpen()) {
+            webSocketClient.close();
+        }
+
+        this.forceDisconnected = true;
     }
 }

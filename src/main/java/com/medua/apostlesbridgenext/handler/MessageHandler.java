@@ -25,6 +25,12 @@ public class MessageHandler {
     }
 
     public static void sendMessage(Text message) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (!client.isOnThread()) {
+            client.execute(() -> sendMessage(message));
+            return;
+        }
+
         MinecraftClient.getInstance().inGameHud.getChatHud().addMessage(message);
     }
 
@@ -37,6 +43,11 @@ public class MessageHandler {
     }
 
     public static void sendMessageWithImages(String message, boolean prefix, List<String> imageURLs) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (!client.isOnThread()) {
+            client.execute(() -> sendMessageWithImages(message, prefix, imageURLs));
+            return;
+        }
         Text messageComponent = getTextForMessage(message, prefix);
 
         if (!imageURLs.isEmpty()) {
