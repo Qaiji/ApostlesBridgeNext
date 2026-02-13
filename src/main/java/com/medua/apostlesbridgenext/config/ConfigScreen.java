@@ -104,8 +104,6 @@ public class ConfigScreen extends Screen {
         context.drawText(textRenderer, "WebSocket-Token:", width / 2 - 110, textPosition, 0xA0A0A0, false);
         textPosition += fieldTotalHeight;
         context.drawText(textRenderer, "Your Guild:", width / 2 - 110, textPosition, 0xA0A0A0, false);
-
-        super.render(context, mouseX, mouseY, delta);
     }
 
     @Override

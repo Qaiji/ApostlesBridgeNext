@@ -110,7 +110,7 @@ public class ConfigFormattingScreen extends Screen {
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        this.renderBackground(context, mouseX, mouseY, delta);
+        this.renderInGameBackground(context);
 
         String title = "Apostles Settings";
         int titleWidth = textRenderer.getWidth(title);
