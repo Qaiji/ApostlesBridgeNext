@@ -10,6 +10,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.network.ServerInfo;
 import org.java_websocket.client.WebSocketClient;
+import org.java_websocket.enums.ReadyState;
 import org.java_websocket.handshake.ServerHandshake;
 
 import java.net.URI;
@@ -18,6 +19,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class WebSocketHandler {
     private static final LogHandler LOGGER = new LogHandler(WebSocketHandler.class);
@@ -33,6 +36,11 @@ public class WebSocketHandler {
     private String authKey = "";
 
     ApostlesBridgeNextClient apostlesBridge;
+
+    private final AtomicBoolean connecting = new AtomicBoolean(false);
+    private final AtomicLong connectionGeneration = new AtomicLong(0);
+
+    private Timer pendingConnectTimer;
 
     public WebSocketHandler(ApostlesBridgeNextClient apostlesBridge) {
         this.apostlesBridge = apostlesBridge;
@@ -63,23 +71,55 @@ public class WebSocketHandler {
             return;
         }
 
-        if (webSocketClient != null && !webSocketClient.isClosed()) {
-            LOGGER.debug("Closing existing WebSocket connection before reconnecting...");
-            webSocketClient.close();
+        if (MinecraftClient.getInstance().player == null) {
+            return;
         }
 
-        LOGGER.debug("Trying to connect to WebSocket (" + getServerURL() + ")");
+        if (webSocketClient != null && webSocketClient.isOpen()) {
+            LOGGER.debug("Connect skipped - as it's already connected.");
+            return;
+        }
+
+        if (!connecting.compareAndSet(false, true)) {
+            LOGGER.debug("Connect skipped - as connecting is already in progress.");
+            return;
+        }
+
+        if (webSocketClient != null && webSocketClient.getReadyState() == ReadyState.CLOSING) {
+            connecting.set(false);
+            scheduleDelayedConnect();
+            return;
+        }
+
+        if (webSocketClient != null && !webSocketClient.isClosed()) {
+            LOGGER.debug("Closing existing WebSocket connection before reconnecting...");
+            try {
+                webSocketClient.close();
+            } catch (Exception ignored) {
+            }
+        }
+
+        final long generation = connectionGeneration.incrementAndGet();
+
+        LOGGER.debug("Trying to connect to WebSocket (" + getServerURL() + ") [gen=" + generation + "]");
         try {
             webSocketClient = new WebSocketClient(new URI(getServerURL())) {
                 @Override
                 public void onOpen(ServerHandshake handshake) {
-                    LOGGER.debug("Connected to WebSocket!");
+                    if (generation != connectionGeneration.get()) {
+                        return;
+                    }
+                    connecting.set(false);
+                    LOGGER.debug("Connected to WebSocket! [gen=" + generation + "]");
                 }
 
                 @Override
                 public void onMessage(String messageJson) {
+                    if (generation != connectionGeneration.get()) {
+                        return;
+                    }
                     try {
-                        LOGGER.debug("WebSocket Recieved: " + messageJson);
+                        LOGGER.debug("WebSocket Recieved: " + messageJson + " [gen=" + generation + "]");
                         JsonObject json = new Gson().fromJson(messageJson, JsonObject.class);
 
                         if (json.has("type")) {
@@ -88,6 +128,7 @@ public class WebSocketHandler {
                             if (messageType.equals("authKey")) {
                                 authKey = json.get("authKey").getAsString();
                                 LOGGER.debug("Received new auth-key: " + authKey);
+
                                 restartWebSocket();
                             } else if (messageType.equals("message") && json.has("messageData")) {
                                 JsonObject messageData = json.getAsJsonObject("messageData");
@@ -136,20 +177,42 @@ public class WebSocketHandler {
 
                 @Override
                 public void onClose(int code, String reason, boolean remote) {
-                    LOGGER.debug("Disconnected from WebSocket: " + reason);
-                    scheduleReconnect();
+                    if (generation != connectionGeneration.get()) {
+                        return;
+                    }
+                    connecting.set(false);
+                    LOGGER.debug("Disconnected from WebSocket: " + reason + " [gen=" + generation + "]");
+                    if (shouldConnect()) {
+                        scheduleReconnect();
+                    }
                 }
 
                 @Override
                 public void onError(Exception e) {
-                    LOGGER.error("WebSocket error: " + e.getMessage());
-                    scheduleReconnect();
+                    if (generation != connectionGeneration.get()) {
+                        return;
+                    }
+                    connecting.set(false);
+                    LOGGER.error("WebSocket error: " + e.getMessage() + " [gen=" + generation + "]");
+                    if (shouldConnect()) {
+                        scheduleReconnect();
+                    }
                 }
             };
         } catch (URISyntaxException e) {
+            connecting.set(false);
             LOGGER.error("An error occured trying to connect to the WebSocket (" + e.getMessage() + ")");
+            scheduleReconnect();
+            return;
         }
-        webSocketClient.connect();
+
+        try {
+            webSocketClient.connect();
+        } catch (Exception e) {
+            connecting.set(false);
+            LOGGER.error("Failed to start WebSocket connect: " + e.getMessage());
+            scheduleReconnect();
+        }
     }
 
     private boolean canConnect() {
@@ -222,6 +285,23 @@ public class WebSocketHandler {
         }, RECONNECT_DELAY);
     }
 
+    private synchronized void scheduleDelayedConnect() {
+        if (pendingConnectTimer != null) {
+            pendingConnectTimer.cancel();
+            pendingConnectTimer.purge();
+        }
+
+        pendingConnectTimer = new Timer();
+        pendingConnectTimer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                if (shouldConnect()) {
+                    connect();
+                }
+            }
+        }, 250);
+    }
+
     public String getStatus() {
         if (webSocketClient != null && webSocketClient.isOpen()) {
             return "§aCONNECTED§r";
@@ -241,10 +321,23 @@ public class WebSocketHandler {
 
         if (reconnectTimer != null) {
             reconnectTimer.cancel();
+            reconnectTimer.purge();
+        }
+        reconnectScheduled = false;
+
+        if (pendingConnectTimer != null) {
+            pendingConnectTimer.cancel();
+            pendingConnectTimer.purge();
         }
 
-        if (webSocketClient != null && webSocketClient.isOpen()) {
-            webSocketClient.close();
+        connectionGeneration.incrementAndGet();
+        connecting.set(false);
+
+        if (webSocketClient != null && !webSocketClient.isClosed()) {
+            try {
+                webSocketClient.close();
+            } catch (Exception ignored) {
+            }
         }
 
         if (this.forceDisconnected) {
@@ -252,7 +345,7 @@ public class WebSocketHandler {
         }
 
         if (shouldConnect()) {
-            connect();
+            scheduleDelayedConnect();
         } else {
             LOGGER.debug("Restart skipped due to mode restrictions.");
         }
@@ -269,10 +362,18 @@ public class WebSocketHandler {
 
         if (reconnectTimer != null) {
             reconnectTimer.cancel();
+            reconnectTimer.purge();
         }
+        reconnectScheduled = false;
 
-        if (webSocketClient != null && webSocketClient.isOpen()) {
-            webSocketClient.close();
+        connectionGeneration.incrementAndGet();
+        connecting.set(false);
+
+        if (webSocketClient != null && !webSocketClient.isClosed()) {
+            try {
+                webSocketClient.close();
+            } catch (Exception ignored) {
+            }
         }
 
         this.forceDisconnected = true;

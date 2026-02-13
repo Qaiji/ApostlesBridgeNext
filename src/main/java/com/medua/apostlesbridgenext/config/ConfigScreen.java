@@ -29,6 +29,10 @@ public class ConfigScreen extends Screen {
     private final int generalToggleButtonHeight = 20;
     private final int formattingButtonHeight = 20;
 
+    private String initialUrl;
+    private String initialToken;
+    private int initialMode;
+
     public ConfigScreen(ApostlesBridgeNextClient apostlesBridge) {
         super(Text.literal("Apostles Settings"));
         this.apostlesBridge = apostlesBridge;
@@ -68,6 +72,10 @@ public class ConfigScreen extends Screen {
         urlField.setText(Config.getURL());
         tokenField.setText(Config.getToken());
         guildField.setText(Config.getGuild());
+
+        initialUrl = Config.getURL();
+        initialToken = Config.getToken();
+        initialMode = Config.getGeneralMode();
 
         generalToggleButton = addDrawableChild(ButtonWidget.builder(
                 Text.literal(getModeButtonText()),
@@ -133,6 +141,13 @@ public class ConfigScreen extends Screen {
             MinecraftClient.getInstance().setScreen(null);
         }
 
-        this.apostlesBridge.getWebSocketHandler().restartWebSocket(true);
+        String newUrl = Config.getURL();
+        String newToken = Config.getToken();
+        int newMode = Config.getGeneralMode();
+
+        boolean reconnectNeeded = !newUrl.equals(initialUrl) || !newToken.equals(initialToken) || newMode != initialMode;
+        if (reconnectNeeded) {
+            this.apostlesBridge.getWebSocketHandler().restartWebSocket(true);
+        }
     }
 }

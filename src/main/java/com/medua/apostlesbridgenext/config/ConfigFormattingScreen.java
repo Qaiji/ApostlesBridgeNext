@@ -173,6 +173,5 @@ public class ConfigFormattingScreen extends Screen {
         if (removeScreen) {
             MinecraftClient.getInstance().setScreen(null);
         }
-        this.apostlesBridge.getWebSocketHandler().restartWebSocket(true);
     }
 }
