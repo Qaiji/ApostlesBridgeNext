@@ -1,6 +1,6 @@
 plugins {
-    id 'fabric-loom' version '1.11-SNAPSHOT'
-    id 'com.github.johnrengelman.shadow' version '8.1.1'
+    id 'fabric-loom'
+    id 'com.gradleup.shadow' version '8.3.5'
     id 'maven-publish'
 }
 
@@ -39,19 +39,27 @@ dependencies {
 tasks.named('shadowJar') {
     archiveClassifier.set('dev-shadow')
     configurations = [project.configurations.shadowRuntime]
-    relocate 'org.java_websocket', 'com.medua.shaded.org.java_websocket'
+    // relocate 'org.java_websocket', 'com.medua.shaded.org.java_websocket'
 }
 
 processResources {
-    inputs.property "version", project.version
-    inputs.property "minecraft_version", project.minecraft_version
-    inputs.property "loader_version", project.loader_version
-    filteringCharset "UTF-8"
+    def modVersion = project.version
+    def mcVersion = project.minecraft_version
+    def loaderVersion = project.loader_version
+    def modId = project.mod_id
+
+    inputs.property "version", modVersion
+    inputs.property "minecraft_version", mcVersion
+    inputs.property "loader_version", loaderVersion
+    inputs.property "mod_id", modId
+
+    filteringCharset = "UTF-8"
 
     filesMatching("fabric.mod.json") {
-        expand "version": project.version,
-                "minecraft_version": project.minecraft_version,
-                "loader_version": project.loader_version
+        expand "version": modVersion,
+                "minecraft_version": mcVersion,
+                "loader_version": loaderVersion,
+                "mod_id": modId
     }
 }
 
@@ -87,6 +95,49 @@ jar {
 tasks.named('remapJar') {
     dependsOn tasks.named('shadowJar')
     input.set(tasks.named('shadowJar').get().archiveFile)
+}
+
+def generatedSrcDir = layout.buildDirectory.dir("generated/sources/buildConfig/java/main")
+
+tasks.register("generateBuildConfig") {
+    outputs.dir(generatedSrcDir)
+
+    def modId = project.mod_id
+    def modVersion = project.mod_version
+
+    doLast {
+        def pkg = "com.medua.apostlesbridgenext.generated.gen"
+        def pkgPath = pkg.replace('.', '/')
+        def outDir = generatedSrcDir.get().asFile
+        def javaFile = new File(outDir, "${pkgPath}/BuildConfig.java")
+        javaFile.parentFile.mkdirs()
+        javaFile.text = """package ${pkg};
+
+public final class BuildConfig {
+    public static final String MODID = \"${modId}\";
+    public static final String VERSION = \"${modVersion}\";
+
+    private BuildConfig() {
+    }
+}
+"""
+    }
+}
+
+sourceSets {
+    main {
+        java {
+            srcDir generatedSrcDir
+        }
+    }
+}
+
+tasks.named("compileJava") {
+    dependsOn tasks.named("generateBuildConfig")
+}
+
+tasks.named("sourcesJar") {
+    dependsOn tasks.named("generateBuildConfig")
 }
 
 // configure the maven publication

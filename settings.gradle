@@ -4,6 +4,16 @@ pluginManagement {
             name = 'Fabric'
             url = 'https://maven.fabricmc.net/'
         }
+        maven {
+            name = 'Fabric Snapshots'
+            url = 'https://maven.fabricmc.net/snapshot/'
+        }
+        maven { url = 'https://plugins.gradle.org/m2/' }
+        mavenCentral()
         gradlePluginPortal()
+    }
+
+    plugins {
+        id 'fabric-loom' version providers.gradleProperty("loom_version").get()
     }
 }

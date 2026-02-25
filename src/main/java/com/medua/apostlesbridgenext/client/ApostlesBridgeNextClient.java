@@ -1,5 +1,6 @@
 package com.medua.apostlesbridgenext.client;
 
+import com.medua.apostlesbridgenext.generated.gen.BuildConfig;
 import com.medua.apostlesbridgenext.commands.ApostlesCommand;
 import com.medua.apostlesbridgenext.config.Config;
 import com.medua.apostlesbridgenext.events.PlayerJoinEvent;
@@ -10,8 +11,8 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 
 public class ApostlesBridgeNextClient implements ClientModInitializer {
 
-    public static final String MODID = "apostlesbridgenext";
-    public static final String VERSION = "0.10.4-BETA";
+    public static final String MODID = BuildConfig.MODID;
+    public static final String VERSION = BuildConfig.VERSION;
 
     private static final LogHandler LOGGER = new LogHandler(ApostlesBridgeNextClient.class);
     private WebSocketHandler webSocketHandler;

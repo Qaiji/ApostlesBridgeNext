@@ -88,11 +88,8 @@ public class ConfigScreen extends Screen {
         // FORMATTING BUTTON
         addDrawableChild(ButtonWidget.builder(
                 Text.literal("Formatting"),
-                button -> {
-                    saveSettings();
-                    MinecraftClient.getInstance().setScreen(new ConfigFormattingScreen(this.apostlesBridge));
-                }
-        ).dimensions(10, height - formattingButtonHeight - 10, 80, formattingButtonHeight).build());
+                button -> MinecraftClient.getInstance().setScreen(new ConfigFormattingScreen(this.apostlesBridge)))
+                .dimensions(10, height - formattingButtonHeight - 10, 80, formattingButtonHeight).build());
     }
 
     @Override

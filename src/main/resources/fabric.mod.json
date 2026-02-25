@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "id": "apostlesbridgenext",
+  "id": "${mod_id}",
   "version": "${version}",
   "name": "ApostlesBridgeNext",
   "description": "A bridge mod for Apostles",
@@ -12,9 +12,6 @@
   "entrypoints": {
     "client": [
       "com.medua.apostlesbridgenext.client.ApostlesBridgeNextClient"
-    ],
-    "main": [
-      "com.medua.apostlesbridgenext.ApostlesBridgeNext"
     ]
   },
   "depends": {

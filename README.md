@@ -2,7 +2,7 @@
 # ApostlesBridgeNext 🌉
 
 **ApostlesBridgeNext**  
-A Fabric 1.21.5 client-side mod designed for Hypixel SkyBlock. It’s an updated migration of [Medua7/ApostlesBridge](https://github.com/Medua7/ApostlesBridge), originally built for Forge 1.8.9. The mod is a bridge (using WebSocket technology) between Minecraft "Guild Chat" on Hypixel Skyblock and a Discord channel.
+A Fabric 1.21.5+ client-side mod designed for Hypixel SkyBlock. It’s an updated migration of [Qaiji/ApostlesBridge](https://github.com/Qaiji/ApostlesBridge), originally built for Forge 1.8.9. The mod is a bridge (using WebSocket technology) between Minecraft "Guild Chat" on Hypixel Skyblock and a Discord channel.
 
 ## Features
 
@@ -26,7 +26,7 @@ _(WebSocket connection properties are found on the discord)_
 
 1. Download the latest release JAR or build it yourself via Gradle.
 2. Drop it into your <minecraft>/mods folder.
-3. Run Minecraft with Fabric 1.21.5 (tested with Fabric Loader 0.16.14 and Fabric API).
+3. Run Minecraft with Fabric 1.21.5+ (tested with Fabric Loader 0.16.14+ and Fabric API).
 
 ---
 
@@ -53,6 +53,6 @@ Settings are automatically saved to the mod’s config files when changed and pe
 
 ## Requirements
 
-- Minecraft 1.21.5
+- Minecraft 1.21.5+
 - Fabric Loader 0.16.14+
 - Fabric API
