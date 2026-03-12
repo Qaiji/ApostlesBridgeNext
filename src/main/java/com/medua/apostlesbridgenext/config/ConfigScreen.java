@@ -104,11 +104,11 @@ public class ConfigScreen extends Screen {
         context.drawText(textRenderer, title, titleX, titleY, 0xFFFFFF, false);
 
         int textPosition = height / 2 - totalHeight / 2 + headerMarginBottom + fieldSpacingHeight;
-        context.drawText(textRenderer, "WebSocket-URL:", width / 2 - 110, textPosition, 0xA0A0A0, false);
+        context.drawText(textRenderer, "WebSocket-URL:", width / 2 - 110, textPosition, 0xFFA0A0A0, false);
         textPosition += fieldTotalHeight;
-        context.drawText(textRenderer, "WebSocket-Token:", width / 2 - 110, textPosition, 0xA0A0A0, false);
+        context.drawText(textRenderer, "WebSocket-Token:", width / 2 - 110, textPosition, 0xFFA0A0A0, false);
         textPosition += fieldTotalHeight;
-        context.drawText(textRenderer, "Your Guild:", width / 2 - 110, textPosition, 0xA0A0A0, false);
+        context.drawText(textRenderer, "Your Guild:", width / 2 - 110, textPosition, 0xFFA0A0A0, false);
     }
 
     @Override
