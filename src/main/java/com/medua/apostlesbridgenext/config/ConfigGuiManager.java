@@ -28,7 +28,13 @@ public class ConfigGuiManager {
                 Text.literal("ApostlesBridgeNext Config"),
                 new GuiContext(new GuiElementComponent(editor)),
                 null
-        );
+        ) {
+            @Override
+            public void removed() {
+                super.removed();
+                MoulBridgeConfig.CONFIG.saveNow();
+            }
+        };
 
         return screen;
     }
