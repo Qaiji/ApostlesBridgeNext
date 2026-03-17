@@ -30,15 +30,15 @@ public class ConfigSync {
 
         cfg.general.generalMode = Config.getGeneralMode();
 
-        cfg.formatting.originColor = colorIndex(Config.getFormattingColors().getOriginColor());
-        cfg.formatting.userColor = colorIndex(Config.getFormattingColors().getUserColor());
-        cfg.formatting.messageColor = colorIndex(Config.getFormattingColors().getMessageColor());
+        cfg.formatting.colors.originColor = colorIndex(Config.getFormattingColors().getOriginColor());
+        cfg.formatting.colors.userColor = colorIndex(Config.getFormattingColors().getUserColor());
+        cfg.formatting.colors.messageColor = colorIndex(Config.getFormattingColors().getMessageColor());
 
-        cfg.formatting.bridge = Config.getFormattingNames().getBridge();
-        cfg.formatting.discord = Config.getFormattingNames().getDiscord();
-        cfg.formatting.g1 = Config.getFormattingNames().getG1();
-        cfg.formatting.g2 = Config.getFormattingNames().getG2();
-        cfg.formatting.g3 = Config.getFormattingNames().getG3();
+        cfg.formatting.prefixes.bridge = Config.getFormattingNames().getBridge();
+        cfg.formatting.prefixes.discord = Config.getFormattingNames().getDiscord();
+        cfg.formatting.prefixes.g1 = Config.getFormattingNames().getG1();
+        cfg.formatting.prefixes.g2 = Config.getFormattingNames().getG2();
+        cfg.formatting.prefixes.g3 = Config.getFormattingNames().getG3();
     }
 
     public static void syncToJson() {
@@ -51,15 +51,15 @@ public class ConfigSync {
         Config.setGuild(GUILDS[cfg.general.guild]);
         Config.setGeneralMode(cfg.general.generalMode);
 
-        Config.getFormattingColors().setOriginColor(COLORS[cfg.formatting.originColor]);
-        Config.getFormattingColors().setUserColor(COLORS[cfg.formatting.userColor]);
-        Config.getFormattingColors().setMessageColor(COLORS[cfg.formatting.messageColor]);
+        Config.getFormattingColors().setOriginColor(COLORS[cfg.formatting.colors.originColor]);
+        Config.getFormattingColors().setUserColor(COLORS[cfg.formatting.colors.userColor]);
+        Config.getFormattingColors().setMessageColor(COLORS[cfg.formatting.colors.messageColor]);
 
-        Config.getFormattingNames().setBridge(cfg.formatting.bridge);
-        Config.getFormattingNames().setDiscord(cfg.formatting.discord);
-        Config.getFormattingNames().setG1(cfg.formatting.g1);
-        Config.getFormattingNames().setG2(cfg.formatting.g2);
-        Config.getFormattingNames().setG3(cfg.formatting.g3);
+        Config.getFormattingNames().setBridge(cfg.formatting.prefixes.bridge);
+        Config.getFormattingNames().setDiscord(cfg.formatting.prefixes.discord);
+        Config.getFormattingNames().setG1(cfg.formatting.prefixes.g1);
+        Config.getFormattingNames().setG2(cfg.formatting.prefixes.g2);
+        Config.getFormattingNames().setG3(cfg.formatting.prefixes.g3);
 
         Config.saveConfig();
     }
