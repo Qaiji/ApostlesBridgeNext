@@ -29,4 +29,4 @@ jobs:
         uses: actions/upload-artifact@v4.3.0
         with:
           name: mod-jar
-          path: build/libs/**/*.jar
+          path: versions/**/build/libs/*.jar
