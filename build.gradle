@@ -2,6 +2,8 @@ plugins {
     id 'fabric-loom'
     id 'com.gradleup.shadow' version '8.3.5'
     id 'maven-publish'
+    id 'org.jetbrains.kotlin.jvm' version '2.0.0'
+    id 'dev.kikugie.stonecutter'
 }
 
 version = project.mod_version
@@ -21,6 +23,24 @@ repositories {
     // Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
     // See https://docs.gradle.org/current/userguide/declaring_repositories.html
     // for more information about repositories.
+    mavenCentral()
+
+    exclusiveContent {
+        forRepository {
+            maven { url "https://maven.notenoughupdates.org/releases" }
+        }
+        filter {
+            includeGroup("org.notenoughupdates")
+            includeGroup("org.notenoughupdates.moulconfig")
+        }
+    }
+
+    maven {
+        url = uri("https://maven.notenoughupdates.org/releases")
+        content {
+            includeGroup("org.notenoughupdates.moulconfig")
+        }
+    }
 }
 
 dependencies {
@@ -30,6 +50,8 @@ dependencies {
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+    modImplementation "org.notenoughupdates.moulconfig:modern-${project.property("moulconfig_version")}"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:2.0.0"
 
     implementation "org.java-websocket:Java-WebSocket:1.5.4"
     compileOnly "org.java-websocket:Java-WebSocket:1.5.4"
@@ -133,6 +155,10 @@ sourceSets {
 }
 
 tasks.named("compileJava") {
+    dependsOn tasks.named("generateBuildConfig")
+}
+
+tasks.named("compileKotlin") {
     dependsOn tasks.named("generateBuildConfig")
 }
 

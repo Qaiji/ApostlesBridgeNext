@@ -25,6 +25,19 @@ jobs:
       - name: Execute Gradle build
         run: ./gradlew build
 
+      - name: Collect and rename JARs
+        run: |
+          mkdir -p build/libs
+
+          for file in versions/*/build/libs/*.jar; do
+            [ -f "$file" ] || continue
+          
+            version=$(echo "$file" | cut -d'/' -f2)
+            name=$(basename "$file" .jar)
+
+            mv "$file" "build/libs/${name}-${version}.jar"
+          done
+
       - name: Upload built mod JAR
         uses: actions/upload-artifact@v4.3.0
         with:
