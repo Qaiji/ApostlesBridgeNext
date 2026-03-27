@@ -114,6 +114,12 @@ jar {
     }
 }
 
+tasks.withType(AbstractArchiveTask).configureEach {
+    def archiveMinecraftVersion = project.findProperty("minecraft_version")?.toString()?.trim()
+    def archiveVersionSuffix = archiveMinecraftVersion ? "-mc${archiveMinecraftVersion}" : ""
+    archiveVersion.set("${project.mod_version}${archiveVersionSuffix}")
+}
+
 tasks.named('remapJar') {
     dependsOn tasks.named('shadowJar')
     input.set(tasks.named('shadowJar').get().archiveFile)
