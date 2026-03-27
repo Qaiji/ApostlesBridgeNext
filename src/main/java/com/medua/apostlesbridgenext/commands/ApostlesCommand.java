@@ -1,10 +1,7 @@
 package com.medua.apostlesbridgenext.commands;
 
 import com.medua.apostlesbridgenext.client.ApostlesBridgeNextClient;
-import com.medua.apostlesbridgenext.config.Config;
-import com.medua.apostlesbridgenext.config.ConfigScreen;
-import com.medua.apostlesbridgenext.config.Ignored;
-import com.medua.apostlesbridgenext.config.IgnoredType;
+import com.medua.apostlesbridgenext.config.*;
 import com.medua.apostlesbridgenext.handler.MessageHandler;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
@@ -147,7 +144,8 @@ public class ApostlesCommand {
 
     public static boolean proceedCommand(ApostlesBridgeNextClient apostlesBridge, String command, String[] args) {
         if (args.length == 0) {
-            openScreenNextTick(new ConfigScreen(apostlesBridge));
+//            openScreenNextTick(new ConfigScreen(apostlesBridge));
+            openScreenNextTick(ConfigGuiManager.openConfigGui());
             return true;
         } else if (args.length == 1) {
             if (args[0].equalsIgnoreCase("reconnect")) {

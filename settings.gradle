@@ -8,6 +8,8 @@ pluginManagement {
             name = 'Fabric Snapshots'
             url = 'https://maven.fabricmc.net/snapshot/'
         }
+        maven { url = 'https://maven.kikugie.dev/releases' }
+
         maven { url = 'https://plugins.gradle.org/m2/' }
         mavenCentral()
         gradlePluginPortal()
@@ -15,5 +17,18 @@ pluginManagement {
 
     plugins {
         id 'fabric-loom' version providers.gradleProperty("loom_version").get()
+        id "dev.kikugie.stonecutter" version "0.8.3"
+
+    }
+}
+
+plugins {
+    id("dev.kikugie.stonecutter") version "0.8.3"
+}
+
+stonecutter {
+    create(rootProject) {
+        versions("1.21.10", "1.21.11")
+        vcsVersion = "1.21.10"
     }
 }
