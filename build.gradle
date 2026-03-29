@@ -51,7 +51,10 @@ dependencies {
 
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
     modImplementation "org.notenoughupdates.moulconfig:modern-${project.property("moulconfig_version")}"
+    include "org.notenoughupdates.moulconfig:modern-${project.property("moulconfig_version")}"
+
     implementation "org.jetbrains.kotlin:kotlin-stdlib:2.0.0"
+    include "org.jetbrains.kotlin:kotlin-stdlib:2.0.0"
 
     implementation "org.java-websocket:Java-WebSocket:1.5.4"
     compileOnly "org.java-websocket:Java-WebSocket:1.5.4"
