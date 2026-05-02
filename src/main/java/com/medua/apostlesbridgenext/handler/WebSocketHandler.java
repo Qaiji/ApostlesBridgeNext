@@ -260,7 +260,14 @@ public class WebSocketHandler {
         String username = player != null ? player.getName().getString() : "";
         String uuid = player != null ? player.getUuidAsString() : "";
 
-        return "ws://" + Config.getURL() + "?token=" + token + "&authKey=" + authKey + "&username=" + username + "&uuid=" + uuid;
+        String serverUrl = Config.getURL().trim();
+        while (serverUrl.endsWith("/")) {
+            serverUrl = serverUrl.substring(0, serverUrl.length() - 1);
+        }
+
+        serverUrl = serverUrl.lastIndexOf(":") > -1 ? serverUrl.substring(0, serverUrl.lastIndexOf(":")) : serverUrl;
+
+        return "wss://" + serverUrl + "?token=" + token + "&authKey=" + authKey + "&username=" + username + "&uuid=" + uuid;
     }
 
     private synchronized void scheduleReconnect() {
