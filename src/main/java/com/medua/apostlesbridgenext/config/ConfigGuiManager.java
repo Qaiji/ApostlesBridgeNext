@@ -18,8 +18,6 @@ public class ConfigGuiManager {
     }
 
     public static MoulConfigScreenComponent openConfigGui() {
-
-        // Sync JSON → MoulConfig before opening
         ConfigSync.syncFromJson();
 
         MoulConfigEditor<MoulBridgeConfig> editor = getEditorInstance();

@@ -1,6 +1,11 @@
-package com.medua.apostlesbridgenext.config;
+package com.medua.apostlesbridgenext.util;
 
-public class ConfigUtil {
+import com.medua.apostlesbridgenext.config.Config;
+
+public final class ConfigUtil {
+
+    private ConfigUtil() {
+    }
 
     public static String getOriginReplacement(String origin) {
         return switch (origin.toLowerCase()) {
@@ -13,9 +18,10 @@ public class ConfigUtil {
     }
 
     public static String convertToColor(String rawColor) {
-        return rawColor.replace("§", "&");
+        return rawColor.replace("\u00A7", "&");
     }
+
     public static String convertToRawColor(String color) {
-        return color.replace("&", "§");
+        return color.replace("&", "\u00A7");
     }
 }

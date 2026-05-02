@@ -1,6 +1,8 @@
 package com.medua.apostlesbridgenext.config;
 
 import com.google.gson.annotations.Expose;
+import com.medua.apostlesbridgenext.client.ApostlesBridgeNextClient;
+import com.medua.apostlesbridgenext.util.ColorUtil;
 import io.github.notenoughupdates.moulconfig.Config;
 import io.github.notenoughupdates.moulconfig.Social;
 import io.github.notenoughupdates.moulconfig.annotations.*;
@@ -8,10 +10,8 @@ import io.github.notenoughupdates.moulconfig.common.MyResourceLocation;
 import io.github.notenoughupdates.moulconfig.common.text.StructuredText;
 import io.github.notenoughupdates.moulconfig.processor.ConfigProcessorDriver;
 import io.github.notenoughupdates.moulconfig.processor.MoulConfigProcessor;
-import java.util.List;
 
-import static com.medua.apostlesbridgenext.handler.MessageHandler.sendMessage;
-import static com.medua.apostlesbridgenext.handler.MessageHandler.sendSpacerMessage;
+import java.util.List;
 
 public class MoulBridgeConfig extends Config {
     private static final MyResourceLocation DISCORD =
@@ -28,6 +28,7 @@ public class MoulBridgeConfig extends Config {
 
     static {
         processor = MoulConfigProcessor.withDefaults(CONFIG);
+        processor.registerConfigEditor(ConfigEditorMessagePreview.class, (option, ignored) -> new MessagePreviewEditor(option));
         ConfigProcessorDriver driver = new ConfigProcessorDriver(processor);
         driver.processConfig(CONFIG);
     }
@@ -41,7 +42,6 @@ public class MoulBridgeConfig extends Config {
     public Formatting formatting = new Formatting();
 
     public static class General {
-
         @Expose
         @ConfigOption(name = "WebSocket URL", desc = "URL used to connect to the websocket")
         @ConfigEditorText
@@ -69,9 +69,24 @@ public class MoulBridgeConfig extends Config {
                 "HYPIXEL ONLY"
         })
         public int generalMode = 1;
+
+        @Expose
+        @ConfigOption(name = "Image Preview Size", desc = "Default size for hovered image previews")
+        @ConfigEditorDropdown(values = {
+                "XS",
+                "S",
+                "M",
+                "L"
+        })
+        public int imagePreviewSize = 2;
     }
 
     public static class Formatting {
+        @Expose
+        @ConfigOption(name = "Message Preview", desc = "Preview of the current chat formatting")
+        @ConfigEditorMessagePreview
+        public boolean messagePreview = true;
+
         @Expose
         @Accordion
         @ConfigOption(name = "Colors", desc = "Colors used in the chat message")
@@ -82,90 +97,26 @@ public class MoulBridgeConfig extends Config {
         @ConfigOption(name = "Prefixes", desc = "Names used as message origins")
         public Prefixes prefixes = new Prefixes();
 
-        @Expose
-        @ConfigOption(
-                name = "Send Preview Messages",
-                desc = "Send all preview messages in chat"
-        )
-        @ConfigEditorButton(buttonText = "Send")
-        public Runnable sendPreview = this::sendPreviewMessages;
-
-
-        private void sendPreviewMessages() {
-            Formatting cfg = MoulBridgeConfig.CONFIG.formatting;
-            sendSpacerMessage();
-
-            String origin = color(cfg.colors.originColor);
-            String user = color(cfg.colors.userColor);
-            String msg = color(cfg.colors.messageColor);
-
-            String chatMessage = origin + cfg.prefixes.bridge + " > "
-                    + user + "IcyRetro" + ": " + msg + "this is a preview of a command";
-
-            sendMessage(chatMessage, false);
-
-            chatMessage = origin + cfg.prefixes.discord + " > "
-                    + user + "IcyRetro" + ": " + msg + "this is a preview of a message from bridge";
-
-            sendMessage(chatMessage, false);
-
-            chatMessage = origin + cfg.prefixes.g1 + " > "
-                    + user + "IcyRetro" + ": " + msg + "this is a preview of a message from guild 1";
-
-            sendMessage(chatMessage, false);
-
-            chatMessage = origin + cfg.prefixes.g2 + " > "
-                    + user + "IcyRetro" + ": " + msg + "this is a preview of a message from guild 2";
-
-            sendMessage(chatMessage, false);
-
-            chatMessage = origin + cfg.prefixes.g3 + " > "
-                    + user + "IcyRetro" + ": " + msg + "this is a preview of a message from guild 3";
-
-            sendMessage(chatMessage, false);
-            sendSpacerMessage();
-
-        }
-
-        private static String color(int i) {
-            return "§" + "0123456789abcdef".charAt(i);
-        }
     }
 
     public static class Colors {
         @Expose
         @ConfigOption(name = "Origin Color", desc = "Color for origin messages")
-        @ConfigEditorDropdown(values = {
-                "§0Black","§1Dark Blue","§2Dark Green","§3Dark Aqua",
-                "§4Dark Red","§5Dark Purple","§6Gold","§7Gray",
-                "§8Dark Gray","§9Blue","§aGreen","§bAqua",
-                "§cRed","§dLight Purple","§eYellow","§fWhite"
-        })
-        public Integer originColor = 2;
+        @ConfigEditorDropdown
+        public ColorUtil.MinecraftColor originColor = ColorUtil.MinecraftColor.DARK_GREEN;
 
         @Expose
         @ConfigOption(name = "User Color", desc = "Color for usernames")
-        @ConfigEditorDropdown(values = {
-                "§0Black","§1Dark Blue","§2Dark Green","§3Dark Aqua",
-                "§4Dark Red","§5Dark Purple","§6Gold","§7Gray",
-                "§8Dark Gray","§9Blue","§aGreen","§bAqua",
-                "§cRed","§dLight Purple","§eYellow","§fWhite"
-        })
-        public Integer userColor = 11;
+        @ConfigEditorDropdown
+        public ColorUtil.MinecraftColor userColor = ColorUtil.MinecraftColor.AQUA;
 
         @Expose
         @ConfigOption(name = "Message Color", desc = "Color for messages")
-        @ConfigEditorDropdown(values = {
-                "§0Black","§1Dark Blue","§2Dark Green","§3Dark Aqua",
-                "§4Dark Red","§5Dark Purple","§6Gold","§7Gray",
-                "§8Dark Gray","§9Blue","§aGreen","§bAqua",
-                "§cRed","§dLight Purple","§eYellow","§fWhite"
-        })
-        public Integer messageColor = 15;
+        @ConfigEditorDropdown
+        public ColorUtil.MinecraftColor messageColor = ColorUtil.MinecraftColor.WHITE;
     }
 
     public static class Prefixes {
-
         @Expose
         @ConfigOption(name = "Bridge Name", desc = "Bridge prefix in chat")
         @ConfigEditorText
@@ -194,7 +145,10 @@ public class MoulBridgeConfig extends Config {
 
     @Override
     public StructuredText getTitle() {
-        return StructuredText.of("ApostlesBridgeNext Config");
+        return StructuredText.of("ApostlesBridgeNext v" + ApostlesBridgeNextClient.VERSION + " by ")
+                .append(StructuredText.of("Medua").darkPurple())
+                .append(" & ")
+                .append(StructuredText.of("IcyRetro").darkPurple());
     }
 
     @Override

@@ -3,6 +3,7 @@ package com.medua.apostlesbridgenext.client;
 import com.medua.apostlesbridgenext.generated.gen.BuildConfig;
 import com.medua.apostlesbridgenext.commands.ApostlesCommand;
 import com.medua.apostlesbridgenext.config.Config;
+import com.medua.apostlesbridgenext.handler.ImagePreviewHandler;
 import com.medua.apostlesbridgenext.events.PlayerJoinEvent;
 import com.medua.apostlesbridgenext.handler.LogHandler;
 import com.medua.apostlesbridgenext.handler.WebSocketHandler;
@@ -32,6 +33,7 @@ public class ApostlesBridgeNextClient implements ClientModInitializer {
             getWebSocketHandler().restartWebSocket();
         });
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> getWebSocketHandler().restartWebSocket(false));
+        ImagePreviewHandler.register();
 
         // LOAD CONFIG
         Config.loadConfig();

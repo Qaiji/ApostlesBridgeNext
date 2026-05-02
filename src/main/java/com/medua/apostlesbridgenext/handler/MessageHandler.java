@@ -1,6 +1,7 @@
 package com.medua.apostlesbridgenext.handler;
 
 import com.medua.apostlesbridgenext.client.ApostlesBridgeNextClient;
+import com.medua.apostlesbridgenext.types.LinkPreviewType;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.text.ClickEvent;
 import net.minecraft.text.HoverEvent;
@@ -20,8 +21,9 @@ public class MessageHandler {
     public static String getPrefix() {
         return getPrefix(true, false);
     }
+
     public static String getPrefix(boolean colors, boolean brackets) {
-        return (brackets ? "§r[" : "") + (colors ? "§5" : "§r") + MOD_PREFIX + "§r" + (brackets ? "] " : " > ");
+        return (brackets ? "\u00A7r[" : "") + (colors ? "\u00A75" : "\u00A7r") + MOD_PREFIX + "\u00A7r" + (brackets ? "] " : " > ");
     }
 
     public static void sendMessage(Text message) {
@@ -42,27 +44,52 @@ public class MessageHandler {
         sendMessage(getTextForMessage(message, prefix));
     }
 
-    public static void sendMessageWithImages(String message, boolean prefix, List<String> imageURLs) {
+    public static void sendMessageWithLinks(String message, boolean prefix, List<String> urls) {
         MinecraftClient client = MinecraftClient.getInstance();
         if (!client.isOnThread()) {
-            client.execute(() -> sendMessageWithImages(message, prefix, imageURLs));
+            client.execute(() -> sendMessageWithLinks(message, prefix, urls));
             return;
         }
         Text messageComponent = getTextForMessage(message, prefix);
 
-        if (!imageURLs.isEmpty()) {
+        if (!urls.isEmpty()) {
             messageComponent = messageComponent.copy().append(" ");
 
             int imageCount = 1;
-            for (String imageURL : imageURLs) {
-                if (imageCount > 1) {
+            int youtubeCount = 1;
+            int twitchCount = 1;
+            int linkCount = 0;
+            for (String url : urls) {
+                if (linkCount++ > 0) {
                     messageComponent = messageComponent.copy().append(", ");
                 }
-                Text imageComponent = Text.literal("§r[§dIMAGE_" + imageCount++ + "§r]")
-                        .styled(style -> style
-                                .withClickEvent(new ClickEvent.OpenUrl(URI.create(imageURL)))
-                                .withHoverEvent(new HoverEvent.ShowText(Text.literal("Click to open the image")))
-                        );
+
+                LinkPreviewType previewType = LinkPreviewType.fromUrl(url);
+                String label;
+                String hoverText;
+                if (previewType == LinkPreviewType.YOUTUBE) {
+                    label = "\u00A7r[\u00A7cYOUTUBE_" + youtubeCount++ + "\u00A7r]";
+                    hoverText = "Click to open the YouTube video";
+                } else if (previewType == LinkPreviewType.TWITCH) {
+                    label = "\u00A7r[\u00A75TWITCH_" + twitchCount++ + "\u00A7r]";
+                    hoverText = "Click to open the Twitch stream";
+                } else {
+                    ImagePreviewHandler.registerImageUrl(url);
+                    label = "\u00A7r[\u00A7dIMAGE_" + imageCount++ + "\u00A7r]";
+                    hoverText = "Click to open the image";
+                }
+
+                LinkPreviewType finalPreviewType = previewType;
+                Text imageComponent = Text.literal(label)
+                        .styled(style -> {
+                            style = style
+                                    .withClickEvent(new ClickEvent.OpenUrl(URI.create(url)))
+                                    .withHoverEvent(new HoverEvent.ShowText(Text.literal(hoverText)));
+                            if (finalPreviewType == LinkPreviewType.IMAGE) {
+                                style = style.withInsertion(ImagePreviewHandler.IMAGE_PREVIEW_INSERTION + url);
+                            }
+                            return style;
+                        });
 
                 messageComponent = messageComponent.copy().append(imageComponent);
             }
@@ -76,10 +103,11 @@ public class MessageHandler {
     }
 
     private static Text getTextForMessage(String message, boolean prefix) {
-        return Text.literal((prefix ? getPrefix() : "") + "§r" + message);
+        return Text.literal((prefix ? getPrefix() : "") + "\u00A7r" + message);
     }
 
     public static void sendSpacerMessage() {
         sendMessage("=====================================================", false);
     }
+
 }

@@ -1,5 +1,7 @@
 package com.medua.apostlesbridgenext.config;
 
+import com.medua.apostlesbridgenext.types.IgnoredType;
+
 public class Ignored {
 
     String name;

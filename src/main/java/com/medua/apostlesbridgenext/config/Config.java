@@ -5,6 +5,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.medua.apostlesbridgenext.handler.LogHandler;
+import com.medua.apostlesbridgenext.types.IgnoredType;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -26,6 +27,7 @@ public class Config {
     private static String guild = "";
 
     private static int generalMode = 2;
+    private static int imagePreviewSize = ImagePreviewSize.MEDIUM.ordinal();
 
     private static FormattingColors formattingColors = new FormattingColors();
     private static FormattingNames formattingNames = new FormattingNames();
@@ -45,6 +47,7 @@ public class Config {
             guild = json.has("guild") ? json.get("guild").getAsString() : guild;
             token = json.has("token") ? json.get("token").getAsString() : token;
             generalMode = json.has("generalMode") ? json.get("generalMode").getAsInt() : generalMode;
+            imagePreviewSize = json.has("imagePreviewSize") ? clampPreviewSize(json.get("imagePreviewSize").getAsInt()) : imagePreviewSize;
 
             if (json.has("formatting")) {
                 JsonObject formatting = json.getAsJsonObject("formatting");
@@ -94,6 +97,7 @@ public class Config {
         json.addProperty("guild", guild);
         json.addProperty("token", token);
         json.addProperty("generalMode", generalMode);
+        json.addProperty("imagePreviewSize", imagePreviewSize);
 
         JsonObject formatting = new JsonObject();
         JsonObject formattingColors = new JsonObject();
@@ -144,6 +148,10 @@ public class Config {
         return generalMode;
     }
 
+    public static ImagePreviewSize getImagePreviewSize() {
+        return ImagePreviewSize.values()[clampPreviewSize(imagePreviewSize)];
+    }
+
     public static String getGeneralModeText() {
         return GENERAL_MODES[generalMode];
     }
@@ -162,6 +170,10 @@ public class Config {
 
     public static void setGeneralMode(int newGeneralMode) {
         generalMode = newGeneralMode;
+    }
+
+    public static void setImagePreviewSize(int newImagePreviewSize) {
+        imagePreviewSize = clampPreviewSize(newImagePreviewSize);
     }
 
     public static void nextGeneralMode() {
@@ -210,6 +222,33 @@ public class Config {
 
     public static void addIgnored(Ignored ignored) {
         Config.ignoredList.add(ignored);
+    }
+
+    private static int clampPreviewSize(int size) {
+        return Math.max(0, Math.min(size, ImagePreviewSize.values().length - 1));
+    }
+
+    public enum ImagePreviewSize {
+        EXTRA_SMALL(120, 80),
+        SMALL(160, 110),
+        MEDIUM(220, 150),
+        LARGE(320, 220);
+
+        private final int maxWidth;
+        private final int maxHeight;
+
+        ImagePreviewSize(int maxWidth, int maxHeight) {
+            this.maxWidth = maxWidth;
+            this.maxHeight = maxHeight;
+        }
+
+        public int maxWidth() {
+            return maxWidth;
+        }
+
+        public int maxHeight() {
+            return maxHeight;
+        }
     }
 }
 

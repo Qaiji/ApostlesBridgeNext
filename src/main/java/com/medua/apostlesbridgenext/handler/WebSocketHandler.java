@@ -3,9 +3,9 @@ package com.medua.apostlesbridgenext.handler;
 import com.google.gson.*;
 import com.medua.apostlesbridgenext.client.ApostlesBridgeNextClient;
 import com.medua.apostlesbridgenext.config.Config;
-import com.medua.apostlesbridgenext.config.ConfigUtil;
 import com.medua.apostlesbridgenext.config.Ignored;
-import com.medua.apostlesbridgenext.config.IgnoredType;
+import com.medua.apostlesbridgenext.types.IgnoredType;
+import com.medua.apostlesbridgenext.util.ConfigUtil;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.network.ServerInfo;
@@ -146,11 +146,11 @@ public class WebSocketHandler {
                                 }
 
                                 JsonArray images = messageData.has("images") ? messageData.get("images").getAsJsonArray() : new JsonArray();
-                                List<String> imageList = new ArrayList<>();
+                                List<String> urls = new ArrayList<>();
 
                                 for (JsonElement element : images) {
                                     if (element.isJsonPrimitive() && element.getAsJsonPrimitive().isString()) {
-                                        imageList.add(element.getAsString());
+                                        urls.add(element.getAsString());
                                     }
                                 }
 
@@ -166,7 +166,7 @@ public class WebSocketHandler {
 
                                     MinecraftClient client = MinecraftClient.getInstance();
                                     String finalOutputMessage = outputMessage;
-                                    client.execute(() -> MessageHandler.sendMessageWithImages(finalOutputMessage, false, imageList));
+                                    client.execute(() -> MessageHandler.sendMessageWithLinks(finalOutputMessage, false, urls));
                                 }
                             }
                         }

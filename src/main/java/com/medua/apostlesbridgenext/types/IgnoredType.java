@@ -1,4 +1,4 @@
-package com.medua.apostlesbridgenext.config;
+package com.medua.apostlesbridgenext.types;
 
 public enum IgnoredType {
     PLAYER,

@@ -3,6 +3,8 @@ package com.medua.apostlesbridgenext.commands;
 import com.medua.apostlesbridgenext.client.ApostlesBridgeNextClient;
 import com.medua.apostlesbridgenext.config.*;
 import com.medua.apostlesbridgenext.handler.MessageHandler;
+import com.medua.apostlesbridgenext.types.IgnoredType;
+import com.medua.apostlesbridgenext.util.ConfigUtil;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
@@ -45,6 +47,18 @@ public class ApostlesCommand {
                                 proceedCommand(apostlesBridge, alias, new String[]{"status"});
                                 return 1;
                             }))
+                        // /bridge debug [urls]
+                        .then(ClientCommandManager.literal("debug")
+                            .executes(context -> {
+                                proceedCommand(apostlesBridge, alias, new String[]{"debug"});
+                                return 1;
+                            })
+                            .then(ClientCommandManager.argument("urls", StringArgumentType.greedyString())
+                                .executes(context -> {
+                                    String urls = StringArgumentType.getString(context, "urls");
+                                    proceedCommand(apostlesBridge, alias, new String[]{"debug", urls});
+                                    return 1;
+                                })))
                         // /bridge disconnect
                         .then(ClientCommandManager.literal("disconnect")
                                 .executes(context -> {
@@ -144,8 +158,10 @@ public class ApostlesCommand {
 
     public static boolean proceedCommand(ApostlesBridgeNextClient apostlesBridge, String command, String[] args) {
         if (args.length == 0) {
-//            openScreenNextTick(new ConfigScreen(apostlesBridge));
             openScreenNextTick(ConfigGuiManager.openConfigGui());
+            return true;
+        } else if (args.length > 1 && args[0].equalsIgnoreCase("debug")) {
+            sendDebugMessage(parseDebugUrls(String.join(" ", Arrays.copyOfRange(args, 1, args.length))));
             return true;
         } else if (args.length == 1) {
             if (args[0].equalsIgnoreCase("reconnect")) {
@@ -166,6 +182,7 @@ public class ApostlesCommand {
                 MessageHandler.sendMessage("§lApostles Command Usages", false);
                 MessageHandler.sendMessage("§d/bridge reconnect §7- Clears the session and restarts the WebSocket-connection", false);
                 MessageHandler.sendMessage("§d/bridge status §7- Returns the current status of the WebSocket-connection", false);
+                MessageHandler.sendMessage("§d/bridge debug <urls> §7- Sends a local websocket-style debug message", false);
                 MessageHandler.sendMessage("§d/bridge ignore list §7- Lists all ignored players and origins", false);
                 MessageHandler.sendMessage("§d/bridge ignore add <player/origin> [name] §7- Adds the selected player or origin to the ignore list", false);
                 MessageHandler.sendMessage("§d/bridge ignore remove <player/origin> [name] §7- Removes the selected player or origin from the ignore list", false);
@@ -225,5 +242,18 @@ public class ApostlesCommand {
         }
         MessageHandler.sendMessage("Incorrect usage. Please use §d/bridge help §rto get a list of all commands and their usage");
         return false;
+    }
+
+    private static void sendDebugMessage(List<String> urls) {
+        String origin = Config.getFormattingColors().getOriginColor() + ConfigUtil.getOriginReplacement("debug");
+        String user = Config.getFormattingColors().getUserColor() + "DebugUser";
+        String message = Config.getFormattingColors().getMessageColor() + "local websocket-style debug message";
+        MessageHandler.sendMessageWithLinks(origin + " > " + user + ": " + message, false, urls);
+    }
+
+    private static List<String> parseDebugUrls(String urls) {
+        return Arrays.stream(urls.trim().split("\\s+"))
+                .filter(url -> !url.isBlank())
+                .toList();
     }
 }
