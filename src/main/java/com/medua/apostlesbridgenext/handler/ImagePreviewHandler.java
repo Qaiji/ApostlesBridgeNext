@@ -3,8 +3,6 @@ package com.medua.apostlesbridgenext.handler;
 import com.medua.apostlesbridgenext.config.Config;
 import com.medua.apostlesbridgenext.util.ImagePreview;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
-import net.fabricmc.loader.api.FabricLoader;
-import net.fabricmc.loader.api.MappingResolver;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ChatScreen;
@@ -76,9 +74,9 @@ public final class ImagePreviewHandler {
     }
 
     private static Style getHoveredStyle(MinecraftClient client, int mouseX, int mouseY) {
-        Style legacyStyle = getLegacyHoveredStyle(client, mouseX, mouseY);
-        if (legacyStyle != null) {
-            return legacyStyle;
+        Style hoveredStyle = getLegacyHoveredStyle(client, mouseX, mouseY);
+        if (hoveredStyle != null) {
+            return hoveredStyle;
         }
 
         return getDrawnTextHoveredStyle(client, mouseX, mouseY);
@@ -86,13 +84,9 @@ public final class ImagePreviewHandler {
 
     private static Style getLegacyHoveredStyle(MinecraftClient client, int mouseX, int mouseY) {
         try {
-            Object chatHud = client.inGameHud.getChatHud();
-            Method method = chatHud.getClass().getMethod(mapMethod(
-                    "net.minecraft.client.gui.hud.ChatHud",
-                    "getTextStyleAt",
-                    "(DD)Lnet/minecraft/text/Style;"
-            ), double.class, double.class);
-            return (Style) method.invoke(chatHud, (double) mouseX, (double) mouseY);
+            Method method = getDeclaredMethod(client.inGameHud.getChatHud().getClass(), new String[]{"getTextStyleAt", "method_1816"}, double.class, double.class);
+            method.setAccessible(true);
+            return (Style) method.invoke(client.inGameHud.getChatHud(), (double) mouseX, (double) mouseY);
         } catch (ReflectiveOperationException | RuntimeException exception) {
             return null;
         }
@@ -100,44 +94,47 @@ public final class ImagePreviewHandler {
 
     private static Style getDrawnTextHoveredStyle(MinecraftClient client, int mouseX, int mouseY) {
         try {
-            Class<?> consumerClass = Class.forName(mapClass("net.minecraft.client.font.DrawnTextConsumer"));
-            Class<?> clickHandlerClass = Class.forName(mapClass("net.minecraft.client.font.DrawnTextConsumer$ClickHandler"));
-            Class<?> textRendererClass = Class.forName(mapClass("net.minecraft.client.font.TextRenderer"));
-            Constructor<?> constructor = clickHandlerClass.getConstructor(textRendererClass, int.class, int.class);
+            Class<?> consumerClass = forName("net.minecraft.client.font.DrawnTextConsumer", "net.minecraft.class_12225");
+            Class<?> clickHandlerClass = forName("net.minecraft.client.font.DrawnTextConsumer$ClickHandler", "net.minecraft.class_12225$class_12226");
+            Class<?> textRendererClass = forName("net.minecraft.client.font.TextRenderer", "net.minecraft.class_327");
+            Constructor<?> constructor = clickHandlerClass.getDeclaredConstructor(textRendererClass, int.class, int.class);
+            constructor.setAccessible(true);
             Object clickHandler = constructor.newInstance(client.textRenderer, mouseX, mouseY);
-            Method insertMethod = clickHandlerClass.getMethod(mapMethod(
-                    "net.minecraft.client.font.DrawnTextConsumer$ClickHandler",
-                    "insert",
-                    "(Z)Lnet/minecraft/client/font/DrawnTextConsumer$ClickHandler;"
-            ), boolean.class);
+
+            Method insertMethod = getDeclaredMethod(clickHandlerClass, new String[]{"insert", "method_76756"}, boolean.class);
+            insertMethod.setAccessible(true);
             clickHandler = insertMethod.invoke(clickHandler, client.isShiftPressed());
 
-            Method renderMethod = client.inGameHud.getChatHud().getClass().getMethod(mapMethod(
-                    "net.minecraft.client.gui.hud.ChatHud",
-                    "render",
-                    "(Lnet/minecraft/client/font/DrawnTextConsumer;IIZ)V"
-            ), consumerClass, int.class, int.class, boolean.class);
+            Method renderMethod = getDeclaredMethod(client.inGameHud.getChatHud().getClass(), new String[]{"render", "method_75803"}, consumerClass, int.class, int.class, boolean.class);
+            renderMethod.setAccessible(true);
             renderMethod.invoke(client.inGameHud.getChatHud(), clickHandler, client.getWindow().getScaledHeight(), client.inGameHud.getTicks(), true);
 
-            Method getStyleMethod = clickHandlerClass.getMethod(mapMethod(
-                    "net.minecraft.client.font.DrawnTextConsumer$ClickHandler",
-                    "getStyle",
-                    "()Lnet/minecraft/text/Style;"
-            ));
+            Method getStyleMethod = getDeclaredMethod(clickHandlerClass, new String[]{"getStyle", "method_75777"});
+            getStyleMethod.setAccessible(true);
             return (Style) getStyleMethod.invoke(clickHandler);
         } catch (ReflectiveOperationException | RuntimeException exception) {
             return null;
         }
     }
 
-    private static String mapClass(String namedClass) {
-        MappingResolver resolver = FabricLoader.getInstance().getMappingResolver();
-        return resolver.mapClassName("named", namedClass);
+    private static Class<?> forName(String namedClass, String intermediaryClass) throws ClassNotFoundException {
+        try {
+            return Class.forName(namedClass);
+        } catch (ClassNotFoundException exception) {
+            return Class.forName(intermediaryClass);
+        }
     }
 
-    private static String mapMethod(String owner, String name, String descriptor) {
-        MappingResolver resolver = FabricLoader.getInstance().getMappingResolver();
-        return resolver.mapMethodName("named", owner, name, descriptor);
+    private static Method getDeclaredMethod(Class<?> owner, String[] names, Class<?>... parameterTypes) throws NoSuchMethodException {
+        NoSuchMethodException lastException = null;
+        for (String name : names) {
+            try {
+                return owner.getDeclaredMethod(name, parameterTypes);
+            } catch (NoSuchMethodException exception) {
+                lastException = exception;
+            }
+        }
+        throw lastException == null ? new NoSuchMethodException(owner.getName()) : lastException;
     }
 
     private static String getImageUrl(Style hoveredStyle) {

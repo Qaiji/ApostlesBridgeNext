@@ -28,6 +28,7 @@ public class Config {
 
     private static int generalMode = 2;
     private static int imagePreviewSize = ImagePreviewSize.MEDIUM.ordinal();
+    private static boolean emojiConversionEnabled = false;
 
     private static FormattingColors formattingColors = new FormattingColors();
     private static FormattingNames formattingNames = new FormattingNames();
@@ -48,6 +49,7 @@ public class Config {
             token = json.has("token") ? json.get("token").getAsString() : token;
             generalMode = json.has("generalMode") ? json.get("generalMode").getAsInt() : generalMode;
             imagePreviewSize = json.has("imagePreviewSize") ? clampPreviewSize(json.get("imagePreviewSize").getAsInt()) : imagePreviewSize;
+            emojiConversionEnabled = json.has("emojiConversionEnabled") ? json.get("emojiConversionEnabled").getAsBoolean() : emojiConversionEnabled;
 
             if (json.has("formatting")) {
                 JsonObject formatting = json.getAsJsonObject("formatting");
@@ -98,6 +100,7 @@ public class Config {
         json.addProperty("token", token);
         json.addProperty("generalMode", generalMode);
         json.addProperty("imagePreviewSize", imagePreviewSize);
+        json.addProperty("emojiConversionEnabled", emojiConversionEnabled);
 
         JsonObject formatting = new JsonObject();
         JsonObject formattingColors = new JsonObject();
@@ -152,6 +155,10 @@ public class Config {
         return ImagePreviewSize.values()[clampPreviewSize(imagePreviewSize)];
     }
 
+    public static boolean isEmojiConversionEnabled() {
+        return emojiConversionEnabled;
+    }
+
     public static String getGeneralModeText() {
         return GENERAL_MODES[generalMode];
     }
@@ -174,6 +181,10 @@ public class Config {
 
     public static void setImagePreviewSize(int newImagePreviewSize) {
         imagePreviewSize = clampPreviewSize(newImagePreviewSize);
+    }
+
+    public static void setEmojiConversionEnabled(boolean enabled) {
+        emojiConversionEnabled = enabled;
     }
 
     public static void nextGeneralMode() {

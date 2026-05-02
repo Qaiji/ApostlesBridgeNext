@@ -26,6 +26,7 @@ public class ConfigSync {
 
         moulConfig.general.generalMode = Config.getGeneralMode();
         moulConfig.general.imagePreviewSize = Config.getImagePreviewSize().ordinal();
+        moulConfig.formatting.emojiConversionEnabled = Config.isEmojiConversionEnabled();
 
         moulConfig.formatting.colors.originColor = ColorUtil.minecraftColor(Config.getFormattingColors().getOriginColor());
         moulConfig.formatting.colors.userColor = ColorUtil.minecraftColor(Config.getFormattingColors().getUserColor());
@@ -47,6 +48,7 @@ public class ConfigSync {
         Config.setGuild(GUILDS[moulConfig.general.guild]);
         Config.setGeneralMode(moulConfig.general.generalMode);
         Config.setImagePreviewSize(moulConfig.general.imagePreviewSize);
+        Config.setEmojiConversionEnabled(moulConfig.formatting.emojiConversionEnabled);
 
         Config.getFormattingColors().setOriginColor(ColorUtil.minecraftCode(moulConfig.formatting.colors.originColor));
         Config.getFormattingColors().setUserColor(ColorUtil.minecraftCode(moulConfig.formatting.colors.userColor));

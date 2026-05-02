@@ -1,7 +1,9 @@
 package com.medua.apostlesbridgenext.handler;
 
 import com.medua.apostlesbridgenext.client.ApostlesBridgeNextClient;
+import com.medua.apostlesbridgenext.config.Config;
 import com.medua.apostlesbridgenext.types.LinkPreviewType;
+import com.medua.apostlesbridgenext.util.EmojiUtil;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.text.ClickEvent;
 import net.minecraft.text.HoverEvent;
@@ -103,7 +105,11 @@ public class MessageHandler {
     }
 
     private static Text getTextForMessage(String message, boolean prefix) {
-        return Text.literal((prefix ? getPrefix() : "") + "\u00A7r" + message);
+        Text baseMessage = Text.literal((prefix ? getPrefix() : "") + "\u00A7r");
+        if (Config.isEmojiConversionEnabled()) {
+            return baseMessage.copy().append(EmojiUtil.replaceShortcodesWithFont(message));
+        }
+        return baseMessage.copy().append(message);
     }
 
     public static void sendSpacerMessage() {

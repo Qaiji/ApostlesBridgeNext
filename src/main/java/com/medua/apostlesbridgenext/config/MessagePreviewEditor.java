@@ -1,14 +1,19 @@
 package com.medua.apostlesbridgenext.config;
 
 import com.medua.apostlesbridgenext.util.ColorUtil;
+import com.medua.apostlesbridgenext.util.EmojiUtil;
 import io.github.notenoughupdates.moulconfig.common.IFontRenderer;
 import io.github.notenoughupdates.moulconfig.common.RenderContext;
 import io.github.notenoughupdates.moulconfig.common.text.StructuredText;
 import io.github.notenoughupdates.moulconfig.gui.GuiOptionEditor;
+import io.github.notenoughupdates.moulconfig.platform.MoulConfigRenderContext;
 import io.github.notenoughupdates.moulconfig.processor.ProcessedOption;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.text.MutableText;
+import net.minecraft.text.Text;
 
 public class MessagePreviewEditor extends GuiOptionEditor {
-    private static final int HEIGHT = 112;
+    private static final int HEIGHT = 126;
 
     public MessagePreviewEditor(ProcessedOption option) {
         super(option);
@@ -49,6 +54,7 @@ public class MessagePreviewEditor extends GuiOptionEditor {
         renderPreviewLine(context, font, lineX, lineY + 26, formatting.prefixes.g1, "IcyRetro", "preview message from guild 1");
         renderPreviewLine(context, font, lineX, lineY + 39, formatting.prefixes.g2, "IcyRetro", "preview message from guild 2");
         renderPreviewLine(context, font, lineX, lineY + 52, formatting.prefixes.g3, "IcyRetro", "preview message from guild 3");
+        renderEmojiPreviewLine(context, lineX, lineY + 65, formatting.prefixes.discord, "Jaminul");
 
         context.popMatrix();
     }
@@ -65,6 +71,61 @@ public class MessagePreviewEditor extends GuiOptionEditor {
     private static int draw(RenderContext context, IFontRenderer font, int x, int y, String text, int color) {
         context.drawString(font, StructuredText.of(text), x, y, color, false);
         return x + font.getStringWidth(text);
+    }
+
+    private static void renderEmojiPreviewLine(RenderContext context, int x, int y, String origin, String user) {
+        if (!(context instanceof MoulConfigRenderContext moulContext)) {
+            renderPreviewLine(
+                    context,
+                    context.getMinecraft().getDefaultFontRenderer(),
+                    x,
+                    y,
+                    origin,
+                    user,
+                    emojiPreviewMessage()
+            );
+            return;
+        }
+
+        MinecraftClient client = MinecraftClient.getInstance();
+        moulContext.getDrawContext().drawText(
+                client.textRenderer,
+                emojiPreviewText(origin, user),
+                x,
+                y,
+                ColorUtil.TEXT_WHITE,
+                false
+        );
+    }
+
+    private static MutableText emojiPreviewText(String origin, String user) {
+        MoulBridgeConfig.Formatting formatting = MoulBridgeConfig.CONFIG.formatting;
+        MutableText text = Text.literal(origin).styled(style -> style.withColor(rgb(formatting.colors.originColor)));
+        text.append(Text.literal(" > ").styled(style -> style.withColor(rgb(ColorUtil.TEXT_WHITE))));
+        text.append(Text.literal(user).styled(style -> style.withColor(rgb(formatting.colors.userColor))));
+        text.append(Text.literal(": ").styled(style -> style.withColor(rgb(ColorUtil.TEXT_WHITE))));
+        text.append(emojiPreviewMessageText().styled(style -> style.withColor(rgb(formatting.colors.messageColor))));
+        return text;
+    }
+
+    private static MutableText emojiPreviewMessageText() {
+        String message = emojiPreviewMessage();
+        if (MoulBridgeConfig.CONFIG.formatting.emojiConversionEnabled) {
+            return EmojiUtil.replaceShortcodesWithFont(message);
+        }
+        return Text.literal(message);
+    }
+
+    private static String emojiPreviewMessage() {
+        return "emoji test :fire: :rocket:";
+    }
+
+    private static int rgb(ColorUtil.MinecraftColor color) {
+        return color(color) & 0xFFFFFF;
+    }
+
+    private static int rgb(int color) {
+        return color & 0xFFFFFF;
     }
 
     private static int color(ColorUtil.MinecraftColor color) {

@@ -97,6 +97,11 @@ public class MoulBridgeConfig extends Config {
         @ConfigOption(name = "Prefixes", desc = "Names used as message origins")
         public Prefixes prefixes = new Prefixes();
 
+        @Expose
+        @ConfigOption(name = "Emoji Conversion", desc = "Convert common Discord emoji shortcodes into emoji\n\u00A7836 emojis converted. Request more in Bridge (not all will be added).")
+        @ConfigEditorBoolean
+        public boolean emojiConversionEnabled = false;
+
     }
 
     public static class Colors {

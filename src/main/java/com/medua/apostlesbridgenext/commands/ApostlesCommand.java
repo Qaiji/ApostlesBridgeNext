@@ -47,7 +47,7 @@ public class ApostlesCommand {
                                 proceedCommand(apostlesBridge, alias, new String[]{"status"});
                                 return 1;
                             }))
-                        // /bridge debug [urls]
+                        // /bridge debug [message and urls]
                         .then(ClientCommandManager.literal("debug")
                             .executes(context -> {
                                 proceedCommand(apostlesBridge, alias, new String[]{"debug"});
@@ -161,7 +161,7 @@ public class ApostlesCommand {
             openScreenNextTick(ConfigGuiManager.openConfigGui());
             return true;
         } else if (args.length > 1 && args[0].equalsIgnoreCase("debug")) {
-            sendDebugMessage(parseDebugUrls(String.join(" ", Arrays.copyOfRange(args, 1, args.length))));
+            sendDebugMessage(parseDebugMessage(String.join(" ", Arrays.copyOfRange(args, 1, args.length))));
             return true;
         } else if (args.length == 1) {
             if (args[0].equalsIgnoreCase("reconnect")) {
@@ -182,7 +182,7 @@ public class ApostlesCommand {
                 MessageHandler.sendMessage("§lApostles Command Usages", false);
                 MessageHandler.sendMessage("§d/bridge reconnect §7- Clears the session and restarts the WebSocket-connection", false);
                 MessageHandler.sendMessage("§d/bridge status §7- Returns the current status of the WebSocket-connection", false);
-                MessageHandler.sendMessage("§d/bridge debug <urls> §7- Sends a local websocket-style debug message", false);
+                MessageHandler.sendMessage("§d/bridge debug <message/urls> §7- Sends a local websocket-style debug message", false);
                 MessageHandler.sendMessage("§d/bridge ignore list §7- Lists all ignored players and origins", false);
                 MessageHandler.sendMessage("§d/bridge ignore add <player/origin> [name] §7- Adds the selected player or origin to the ignore list", false);
                 MessageHandler.sendMessage("§d/bridge ignore remove <player/origin> [name] §7- Removes the selected player or origin from the ignore list", false);
@@ -244,16 +244,30 @@ public class ApostlesCommand {
         return false;
     }
 
-    private static void sendDebugMessage(List<String> urls) {
+    private static void sendDebugMessage(DebugMessage debugMessage) {
         String origin = Config.getFormattingColors().getOriginColor() + ConfigUtil.getOriginReplacement("debug");
         String user = Config.getFormattingColors().getUserColor() + "DebugUser";
-        String message = Config.getFormattingColors().getMessageColor() + "local websocket-style debug message";
-        MessageHandler.sendMessageWithLinks(origin + " > " + user + ": " + message, false, urls);
+        String message = Config.getFormattingColors().getMessageColor() + debugMessage.message();
+        MessageHandler.sendMessageWithLinks(origin + " > " + user + ": " + message, false, debugMessage.urls());
     }
 
-    private static List<String> parseDebugUrls(String urls) {
-        return Arrays.stream(urls.trim().split("\\s+"))
-                .filter(url -> !url.isBlank())
-                .toList();
+    private static DebugMessage parseDebugMessage(String input) {
+        List<String> urls = new ArrayList<>();
+        List<String> messageParts = new ArrayList<>();
+        for (String part : input.trim().split("\\s+")) {
+            if (part.startsWith("http")) {
+                urls.add(part);
+            } else if (!part.isBlank()) {
+                messageParts.add(part);
+            }
+        }
+
+        String message = messageParts.isEmpty()
+                ? "local websocket-style debug message"
+                : String.join(" ", messageParts);
+        return new DebugMessage(message, urls);
+    }
+
+    private record DebugMessage(String message, List<String> urls) {
     }
 }
