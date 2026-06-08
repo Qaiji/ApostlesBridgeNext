@@ -3,6 +3,7 @@ package com.medua.apostlesbridgenext.client;
 import com.medua.apostlesbridgenext.generated.gen.BuildConfig;
 import com.medua.apostlesbridgenext.commands.ApostlesCommand;
 import com.medua.apostlesbridgenext.config.Config;
+import com.medua.apostlesbridgenext.events.GuildToggleEvent;
 import com.medua.apostlesbridgenext.handler.ImagePreviewHandler;
 import com.medua.apostlesbridgenext.events.PlayerJoinEvent;
 import com.medua.apostlesbridgenext.handler.LogHandler;
@@ -28,6 +29,7 @@ public class ApostlesBridgeNextClient implements ClientModInitializer {
         ApostlesCommand.register(this);
 
         //REGISTER EVENTS
+        GuildToggleEvent.register(this);
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
             PlayerJoinEvent.onPlayerJoin();
             getWebSocketHandler().restartWebSocket();

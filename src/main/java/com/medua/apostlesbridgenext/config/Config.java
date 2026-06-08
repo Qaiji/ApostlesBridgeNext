@@ -27,6 +27,7 @@ public class Config {
     private static String guild = "";
 
     private static int generalMode = 2;
+    private static int previousGeneralMode = 2;
     private static int imagePreviewSize = ImagePreviewSize.MEDIUM.ordinal();
     private static boolean emojiConversionEnabled = false;
 
@@ -48,6 +49,7 @@ public class Config {
             guild = json.has("guild") ? json.get("guild").getAsString() : guild;
             token = json.has("token") ? json.get("token").getAsString() : token;
             generalMode = json.has("generalMode") ? json.get("generalMode").getAsInt() : generalMode;
+            previousGeneralMode = json.has("previousGeneralMode") ? json.get("previousGeneralMode").getAsInt() : previousGeneralMode;
             imagePreviewSize = json.has("imagePreviewSize") ? clampPreviewSize(json.get("imagePreviewSize").getAsInt()) : imagePreviewSize;
             emojiConversionEnabled = json.has("emojiConversionEnabled") ? json.get("emojiConversionEnabled").getAsBoolean() : emojiConversionEnabled;
 
@@ -99,6 +101,7 @@ public class Config {
         json.addProperty("guild", guild);
         json.addProperty("token", token);
         json.addProperty("generalMode", generalMode);
+        json.addProperty("previousGeneralMode", previousGeneralMode);
         json.addProperty("imagePreviewSize", imagePreviewSize);
         json.addProperty("emojiConversionEnabled", emojiConversionEnabled);
 
@@ -177,6 +180,19 @@ public class Config {
 
     public static void setGeneralMode(int newGeneralMode) {
         generalMode = newGeneralMode;
+        if (newGeneralMode != 0) {
+            previousGeneralMode = newGeneralMode;
+        }
+    }
+
+    public static void toggleBridgeChat() {
+        if (generalMode == 0) {
+            generalMode = previousGeneralMode;
+            return;
+        }
+
+        previousGeneralMode = generalMode;
+        generalMode = 0;
     }
 
     public static void setImagePreviewSize(int newImagePreviewSize) {
