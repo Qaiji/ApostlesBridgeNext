@@ -185,14 +185,18 @@ public class Config {
         }
     }
 
-    public static void toggleBridgeChat() {
-        if (generalMode == 0) {
-            generalMode = previousGeneralMode;
+    public static void setBridgeChatEnabled(boolean enabled) {
+        if (enabled) {
+            if (generalMode == 0) {
+                generalMode = previousGeneralMode;
+            }
             return;
         }
 
-        previousGeneralMode = generalMode;
-        generalMode = 0;
+        if (generalMode != 0) {
+            previousGeneralMode = generalMode;
+            generalMode = 0;
+        }
     }
 
     public static void setImagePreviewSize(int newImagePreviewSize) {
