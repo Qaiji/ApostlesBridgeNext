@@ -2,18 +2,18 @@ package com.medua.apostlesbridgenext.events;
 
 import com.medua.apostlesbridgenext.config.Config;
 import com.medua.apostlesbridgenext.handler.MessageHandler;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ServerInfo;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ServerData;
 
 public class PlayerJoinEvent {
     private static String lastServerIP = "";
 
     public static void onPlayerJoin() {
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) { return; }
 
-        ServerInfo serverInfo = mc.getCurrentServerEntry();
-        String serverIP = serverInfo != null ? serverInfo.address : "singleplayer";
+        ServerData serverInfo = mc.getCurrentServer();
+        String serverIP = serverInfo != null ? serverInfo.ip : "singleplayer";
 
         if (!serverIP.equals(lastServerIP)) {
             lastServerIP = serverIP;

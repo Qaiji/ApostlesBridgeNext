@@ -2,15 +2,16 @@ package com.medua.apostlesbridgenext.config;
 
 import com.medua.apostlesbridgenext.util.ColorUtil;
 import com.medua.apostlesbridgenext.util.EmojiUtil;
+import com.medua.apostlesbridgenext.util.MinecraftReflectionUtil;
 import io.github.notenoughupdates.moulconfig.common.IFontRenderer;
 import io.github.notenoughupdates.moulconfig.common.RenderContext;
 import io.github.notenoughupdates.moulconfig.common.text.StructuredText;
 import io.github.notenoughupdates.moulconfig.gui.GuiOptionEditor;
 import io.github.notenoughupdates.moulconfig.platform.MoulConfigRenderContext;
 import io.github.notenoughupdates.moulconfig.processor.ProcessedOption;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 
 public class MessagePreviewEditor extends GuiOptionEditor {
     private static final int HEIGHT = 126;
@@ -76,44 +77,54 @@ public class MessagePreviewEditor extends GuiOptionEditor {
     private static void renderEmojiPreviewLine(RenderContext context, int x, int y, String origin, String user) {
         if (!(context instanceof MoulConfigRenderContext moulContext)) {
             renderPreviewLine(
-                    context,
-                    context.getMinecraft().getDefaultFontRenderer(),
-                    x,
-                    y,
-                    origin,
-                    user,
-                    emojiPreviewMessage()
+                context,
+                context.getMinecraft().getDefaultFontRenderer(),
+                x,
+                y,
+                origin,
+                user,
+                emojiPreviewMessage()
             );
             return;
         }
 
-        MinecraftClient client = MinecraftClient.getInstance();
-        moulContext.getDrawContext().drawText(
-                client.textRenderer,
-                emojiPreviewText(origin, user),
-                x,
-                y,
-                ColorUtil.TEXT_WHITE,
-                false
+        Minecraft client = Minecraft.getInstance();
+        drawComponentText(
+            moulContext.getDrawContext(),
+            client.font,
+            emojiPreviewText(origin, user),
+            x,
+            y,
+            ColorUtil.TEXT_WHITE,
+            false
         );
     }
 
-    private static MutableText emojiPreviewText(String origin, String user) {
+    private static MutableComponent emojiPreviewText(String origin, String user) {
         MoulBridgeConfig.Formatting formatting = MoulBridgeConfig.CONFIG.formatting;
-        MutableText text = Text.literal(origin).styled(style -> style.withColor(rgb(formatting.colors.originColor)));
-        text.append(Text.literal(" > ").styled(style -> style.withColor(rgb(ColorUtil.TEXT_WHITE))));
-        text.append(Text.literal(user).styled(style -> style.withColor(rgb(formatting.colors.userColor))));
-        text.append(Text.literal(": ").styled(style -> style.withColor(rgb(ColorUtil.TEXT_WHITE))));
-        text.append(emojiPreviewMessageText().styled(style -> style.withColor(rgb(formatting.colors.messageColor))));
+        MutableComponent text = Component.literal(origin).withStyle(style -> style.withColor(rgb(formatting.colors.originColor)));
+        text.append(Component.literal(" > ").withStyle(style -> style.withColor(rgb(ColorUtil.TEXT_WHITE))));
+        text.append(Component.literal(user).withStyle(style -> style.withColor(rgb(formatting.colors.userColor))));
+        text.append(Component.literal(": ").withStyle(style -> style.withColor(rgb(ColorUtil.TEXT_WHITE))));
+        text.append(emojiPreviewMessageText().withStyle(style -> style.withColor(rgb(formatting.colors.messageColor))));
         return text;
     }
 
-    private static MutableText emojiPreviewMessageText() {
+    private static MutableComponent emojiPreviewMessageText() {
         String message = emojiPreviewMessage();
         if (MoulBridgeConfig.CONFIG.formatting.emojiConversionEnabled) {
             return EmojiUtil.replaceShortcodesWithFont(message);
         }
-        return Text.literal(message);
+        return Component.literal(message);
+    }
+
+    private static void drawComponentText(Object drawContext, Object font, Component text, int x, int y, int color, boolean shadow) {
+        MinecraftReflectionUtil.invokeAny(
+            drawContext,
+            new String[]{"text", "drawString", "drawText"},
+            new Class<?>[]{font.getClass(), Component.class, int.class, int.class, int.class, boolean.class},
+            font, text, x, y, color, shadow
+        );
     }
 
     private static String emojiPreviewMessage() {

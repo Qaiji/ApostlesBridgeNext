@@ -3,7 +3,6 @@ package com.medua.apostlesbridgenext.config;
 import com.medua.apostlesbridgenext.util.ColorUtil;
 
 public class ConfigSync {
-
     private static final String[] GUILDS = {
             "Apostles",
             "Apostles Prime",
@@ -25,6 +24,7 @@ public class ConfigSync {
         }
 
         moulConfig.general.generalMode = Config.getGeneralMode();
+        moulConfig.general.respectGuildChatToggle = Config.isRespectGuildChatToggleEnabled();
         moulConfig.general.imagePreviewSize = Config.getImagePreviewSize().ordinal();
         moulConfig.formatting.emojiConversionEnabled = Config.isEmojiConversionEnabled();
 
@@ -47,6 +47,7 @@ public class ConfigSync {
 
         Config.setGuild(GUILDS[moulConfig.general.guild]);
         Config.setGeneralMode(moulConfig.general.generalMode);
+        Config.setRespectGuildChatToggleEnabled(moulConfig.general.respectGuildChatToggle);
         Config.setImagePreviewSize(moulConfig.general.imagePreviewSize);
         Config.setEmojiConversionEnabled(moulConfig.formatting.emojiConversionEnabled);
 

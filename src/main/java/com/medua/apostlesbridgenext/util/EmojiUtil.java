@@ -1,10 +1,9 @@
 package com.medua.apostlesbridgenext.util;
 
 import com.medua.apostlesbridgenext.client.ApostlesBridgeNextClient;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.StyleSpriteSource;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.FontDescription;
+import net.minecraft.network.chat.MutableComponent;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -15,9 +14,7 @@ public final class EmojiUtil {
     private static final Pattern SHORTCODE_PATTERN = Pattern.compile(":[a-zA-Z0-9_+\\-]+:");
     private static final Map<String, String> EMOJIS = new HashMap<>();
     private static final Map<String, String> FONT_GLYPHS = new HashMap<>();
-    private static final StyleSpriteSource EMOJI_FONT = new StyleSpriteSource.Font(
-            Identifier.of(ApostlesBridgeNextClient.MODID, "emoji")
-    );
+    private static final FontDescription EMOJI_FONT = createEmojiFontDescription();
 
     static {
         // Emoji sprites are from Twemoji - 72x72 PNGs:
@@ -64,8 +61,7 @@ public final class EmojiUtil {
         add("heart_eyes", codePoint(0x1F60D), 0xE023);
     }
 
-    private EmojiUtil() {
-    }
+    private EmojiUtil() { }
 
     public static String replaceShortcodes(String message) {
         if (message == null || message.isEmpty()) {
@@ -84,13 +80,13 @@ public final class EmojiUtil {
         return builder.toString();
     }
 
-    public static MutableText replaceShortcodesWithFont(String message) {
+    public static MutableComponent replaceShortcodesWithFont(String message) {
         if (message == null || message.isEmpty()) {
-            return Text.literal(message == null ? "" : message);
+            return Component.literal(message == null ? "" : message);
         }
 
         Matcher matcher = SHORTCODE_PATTERN.matcher(message);
-        MutableText text = Text.empty();
+        MutableComponent text = Component.empty();
         int lastEnd = 0;
         while (matcher.find()) {
             String shortcode = matcher.group().toLowerCase();
@@ -102,7 +98,7 @@ public final class EmojiUtil {
             if (matcher.start() > lastEnd) {
                 text.append(message.substring(lastEnd, matcher.start()));
             }
-            text.append(Text.literal(glyph).styled(style -> style.withFont(EMOJI_FONT)));
+            text.append(Component.literal(glyph).withStyle(style -> style.withFont(EMOJI_FONT)));
             lastEnd = matcher.end();
         }
 
@@ -116,6 +112,14 @@ public final class EmojiUtil {
         String key = ":" + shortcode + ":";
         EMOJIS.put(key, emoji);
         FONT_GLYPHS.put(key, String.valueOf((char) glyphCodePoint));
+    }
+
+    private static FontDescription createEmojiFontDescription() {
+        Object identifier = MinecraftReflectionUtil.createResourceId(ApostlesBridgeNextClient.MODID, "emoji");
+        return (FontDescription) MinecraftReflectionUtil.newInstance(
+            "net.minecraft.network.chat.FontDescription$Resource",
+            identifier
+        );
     }
 
     private static String codePoint(int codePoint) {

@@ -3,15 +3,17 @@ package com.medua.apostlesbridgenext.handler;
 import com.medua.apostlesbridgenext.config.Config;
 import com.medua.apostlesbridgenext.util.ImagePreview;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.ChatScreen;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.text.ClickEvent;
-import net.minecraft.text.Style;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.ChatScreen;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.Style;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.net.URI;
 import java.util.Collections;
 import java.util.Map;
@@ -25,28 +27,63 @@ public final class ImagePreviewHandler {
     private static final Map<String, ImagePreview> PREVIEWS = new ConcurrentHashMap<>();
     private static final Set<String> PREVIEWABLE_URLS = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
-    private ImagePreviewHandler() {
-    }
+    private ImagePreviewHandler() { }
 
     public static void register() {
         ScreenEvents.AFTER_INIT.register((client, screen, scaledWidth, scaledHeight) -> {
             if (screen instanceof ChatScreen) {
-                ScreenEvents.afterRender(screen).register(ImagePreviewHandler::render);
+                registerRenderEvent(screen);
             }
         });
+    }
+
+    private static void registerRenderEvent(Screen screen) {
+        if (registerScreenEvent(screen, "afterRender", "net.fabricmc.fabric.api.client.screen.v1.ScreenEvents$AfterRender", "afterRender")) {
+            return;
+        }
+
+        registerScreenEvent(screen, "afterExtract", "net.fabricmc.fabric.api.client.screen.v1.ScreenEvents$AfterExtract", "afterExtract");
+    }
+
+    private static boolean registerScreenEvent(Screen screen, String eventMethodName, String callbackClassName, String callbackMethodName) {
+        try {
+            Method eventMethod = ScreenEvents.class.getMethod(eventMethodName, Screen.class);
+            Object event = eventMethod.invoke(null, screen);
+            Class<?> callbackClass = Class.forName(callbackClassName);
+            Object callback = Proxy.newProxyInstance(
+                    callbackClass.getClassLoader(),
+                    new Class<?>[]{callbackClass},
+                    renderInvocationHandler(callbackMethodName)
+            );
+
+            Method registerMethod = event.getClass().getMethod("register", Object.class);
+            registerMethod.invoke(event, callback);
+            return true;
+        } catch (ReflectiveOperationException | RuntimeException exception) {
+            return false;
+        }
+    }
+
+    private static InvocationHandler renderInvocationHandler(String callbackMethodName) {
+        return (proxy, method, args) -> {
+            if (method.getName().equals(callbackMethodName) && args != null && args.length >= 5) {
+                ImagePreviewHandler.render((Screen) args[0], args[1], (Integer) args[2], (Integer) args[3], ((Number) args[4]).floatValue());
+            }
+            return null;
+        };
     }
 
     public static void registerImageUrl(String imageUrl) {
         PREVIEWABLE_URLS.add(URI.create(imageUrl).toString());
     }
 
-    private static void render(Screen screen, DrawContext context, int mouseX, int mouseY, float tickDelta) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (!(screen instanceof ChatScreen) || client.world == null) {
+    private static void render(Screen screen, Object context, int mouseX, int mouseY, float tickDelta) {
+        Minecraft client = Minecraft.getInstance();
+        if (!(screen instanceof ChatScreen) || client.level == null) {
             return;
         }
 
-        Style hoveredStyle = getHoveredStyle(client, mouseX, mouseY);
+        Style hoveredStyle = getHoveredStyle(context, client, mouseX, mouseY);
         String imageUrl = getImageUrl(hoveredStyle);
         if (imageUrl == null) {
             return;
@@ -57,24 +94,29 @@ public final class ImagePreviewHandler {
         preview.render(context, client, getMaxWidth(client), getMaxHeight(client));
     }
 
-    private static int getMaxWidth(MinecraftClient client) {
-        if (client.isCtrlPressed()) {
-            return Math.max(1, client.getWindow().getScaledWidth() - PADDING * 2 - 2);
+    private static int getMaxWidth(Minecraft client) {
+        if (client.hasControlDown()) {
+            return Math.max(1, client.getWindow().getGuiScaledWidth() - PADDING * 2 - 2);
         }
 
         return Config.getImagePreviewSize().maxWidth();
     }
 
-    private static int getMaxHeight(MinecraftClient client) {
-        if (client.isCtrlPressed()) {
-            return Math.max(1, client.getWindow().getScaledHeight() - PADDING * 2 - 2);
+    private static int getMaxHeight(Minecraft client) {
+        if (client.hasControlDown()) {
+            return Math.max(1, client.getWindow().getGuiScaledHeight() - PADDING * 2 - 2);
         }
 
         return Config.getImagePreviewSize().maxHeight();
     }
 
-    private static Style getHoveredStyle(MinecraftClient client, int mouseX, int mouseY) {
-        Style hoveredStyle = getLegacyHoveredStyle(client, mouseX, mouseY);
+    private static Style getHoveredStyle(Object context, Minecraft client, int mouseX, int mouseY) {
+        Style hoveredStyle = getContextHoveredStyle(context);
+        if (hoveredStyle != null) {
+            return hoveredStyle;
+        }
+
+        hoveredStyle = getLegacyHoveredStyle(client, mouseX, mouseY);
         if (hoveredStyle != null) {
             return hoveredStyle;
         }
@@ -82,32 +124,46 @@ public final class ImagePreviewHandler {
         return getDrawnTextHoveredStyle(client, mouseX, mouseY);
     }
 
-    private static Style getLegacyHoveredStyle(MinecraftClient client, int mouseX, int mouseY) {
+    private static Style getContextHoveredStyle(Object context) {
+        for (String fieldName : new String[]{"clickableTextStyle", "hoveredTextStyle"}) {
+            try {
+                Field field = context.getClass().getDeclaredField(fieldName);
+                field.setAccessible(true);
+                Object value = field.get(context);
+                if (value instanceof Style style) {
+                    return style;
+                }
+            } catch (ReflectiveOperationException | RuntimeException ignored) { }
+        }
+        return null;
+    }
+
+    private static Style getLegacyHoveredStyle(Minecraft client, int mouseX, int mouseY) {
         try {
-            Method method = getDeclaredMethod(client.inGameHud.getChatHud().getClass(), new String[]{"getTextStyleAt", "method_1816"}, double.class, double.class);
+            Method method = getDeclaredMethod(client.gui.getChat().getClass(), new String[]{"getTextStyleAt", "method_1816"}, double.class, double.class);
             method.setAccessible(true);
-            return (Style) method.invoke(client.inGameHud.getChatHud(), (double) mouseX, (double) mouseY);
+            return (Style) method.invoke(client.gui.getChat(), (double) mouseX, (double) mouseY);
         } catch (ReflectiveOperationException | RuntimeException exception) {
             return null;
         }
     }
 
-    private static Style getDrawnTextHoveredStyle(MinecraftClient client, int mouseX, int mouseY) {
+    private static Style getDrawnTextHoveredStyle(Minecraft client, int mouseX, int mouseY) {
         try {
             Class<?> consumerClass = forName("net.minecraft.client.font.DrawnTextConsumer", "net.minecraft.class_12225");
             Class<?> clickHandlerClass = forName("net.minecraft.client.font.DrawnTextConsumer$ClickHandler", "net.minecraft.class_12225$class_12226");
             Class<?> textRendererClass = forName("net.minecraft.client.font.TextRenderer", "net.minecraft.class_327");
             Constructor<?> constructor = clickHandlerClass.getDeclaredConstructor(textRendererClass, int.class, int.class);
             constructor.setAccessible(true);
-            Object clickHandler = constructor.newInstance(client.textRenderer, mouseX, mouseY);
+            Object clickHandler = constructor.newInstance(client.font, mouseX, mouseY);
 
             Method insertMethod = getDeclaredMethod(clickHandlerClass, new String[]{"insert", "method_76756"}, boolean.class);
             insertMethod.setAccessible(true);
-            clickHandler = insertMethod.invoke(clickHandler, client.isShiftPressed());
+            clickHandler = insertMethod.invoke(clickHandler, client.hasShiftDown());
 
-            Method renderMethod = getDeclaredMethod(client.inGameHud.getChatHud().getClass(), new String[]{"render", "method_75803"}, consumerClass, int.class, int.class, boolean.class);
+            Method renderMethod = getDeclaredMethod(client.gui.getChat().getClass(), new String[]{"render", "method_75803"}, consumerClass, int.class, int.class, boolean.class);
             renderMethod.setAccessible(true);
-            renderMethod.invoke(client.inGameHud.getChatHud(), clickHandler, client.getWindow().getScaledHeight(), client.inGameHud.getTicks(), true);
+            renderMethod.invoke(client.gui.getChat(), clickHandler, client.getWindow().getGuiScaledHeight(), client.gui.getGuiTicks(), true);
 
             Method getStyleMethod = getDeclaredMethod(clickHandlerClass, new String[]{"getStyle", "method_75777"});
             getStyleMethod.setAccessible(true);

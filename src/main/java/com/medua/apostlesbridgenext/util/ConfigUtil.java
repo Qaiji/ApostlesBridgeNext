@@ -4,8 +4,7 @@ import com.medua.apostlesbridgenext.config.Config;
 
 public final class ConfigUtil {
 
-    private ConfigUtil() {
-    }
+    private ConfigUtil() { }
 
     public static String getOriginReplacement(String origin) {
         return switch (origin.toLowerCase()) {

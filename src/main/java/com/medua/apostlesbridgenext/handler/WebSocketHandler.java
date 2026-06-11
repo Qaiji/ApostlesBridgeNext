@@ -2,13 +2,14 @@ package com.medua.apostlesbridgenext.handler;
 
 import com.google.gson.*;
 import com.medua.apostlesbridgenext.client.ApostlesBridgeNextClient;
+import com.medua.apostlesbridgenext.config.BridgeConnectionPolicy;
 import com.medua.apostlesbridgenext.config.Config;
 import com.medua.apostlesbridgenext.config.Ignored;
 import com.medua.apostlesbridgenext.types.IgnoredType;
 import com.medua.apostlesbridgenext.util.ConfigUtil;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.network.ServerInfo;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ServerData;
+import net.minecraft.client.player.LocalPlayer;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.enums.ReadyState;
 import org.java_websocket.handshake.ServerHandshake;
@@ -34,6 +35,7 @@ public class WebSocketHandler {
     private boolean forceDisconnected = false;
 
     private String authKey = "";
+    private boolean announceNextConnect = false;
 
     ApostlesBridgeNextClient apostlesBridge;
 
@@ -52,7 +54,7 @@ public class WebSocketHandler {
         new Timer().schedule(new TimerTask() {
             @Override
             public void run() {
-                if (MinecraftClient.getInstance().player != null) {
+                if (Minecraft.getInstance().player != null) {
                     LOGGER.debug("Player detected! Proceeding with WebSocket connection.");
                     if (shouldConnect()) {
                         connect();
@@ -71,7 +73,7 @@ public class WebSocketHandler {
             return;
         }
 
-        if (MinecraftClient.getInstance().player == null) {
+        if (Minecraft.getInstance().player == null) {
             return;
         }
 
@@ -111,6 +113,10 @@ public class WebSocketHandler {
                     }
                     connecting.set(false);
                     LOGGER.debug("Connected to WebSocket! [gen=" + generation + "]");
+                    if (announceNextConnect) {
+                        announceNextConnect = false;
+                        MessageHandler.sendSystemMessage("WebSocket connected.");
+                    }
                 }
 
                 @Override
@@ -164,7 +170,7 @@ public class WebSocketHandler {
                                         outputMessage = outputMessage.replace("%messageColor%", Config.getFormattingColors().getMessageColor());
                                     }
 
-                                    MinecraftClient client = MinecraftClient.getInstance();
+                                    Minecraft client = Minecraft.getInstance();
                                     String finalOutputMessage = outputMessage;
                                     client.execute(() -> MessageHandler.sendMessageWithLinks(finalOutputMessage, false, urls));
                                 }
@@ -230,17 +236,23 @@ public class WebSocketHandler {
         }
 
         int mode = Config.getGeneralMode();
+        if (BridgeConnectionPolicy.isBlockedByGuildChatToggle(mode, Config.isRespectGuildChatToggleEnabled(), Config.isGuildChatEnabled())) {
+            LOGGER.debug("WebSocket connection canceled: Respect /g toggle is enabled and guild chat is disabled.");
+            return false;
+        }
+
+        boolean onHypixel = isOnHypixel();
+        boolean shouldConnect = BridgeConnectionPolicy.shouldConnect(mode, Config.isRespectGuildChatToggleEnabled(), Config.isGuildChatEnabled(), onHypixel);
         switch (mode) {
             case 0: // OFF
                 LOGGER.debug("WebSocket connection canceled: Mode is OFF.");
                 return false;
             case 1: // EVERYWHERE
-                return true;
+                return shouldConnect;
             case 2: // HYPIXEL_ONLY
-                ServerInfo serverInfo = MinecraftClient.getInstance().getCurrentServerEntry();
-                if (serverInfo != null && serverInfo.address != null && serverInfo.address.contains("hypixel.net")) {
+                if (onHypixel) {
                     LOGGER.debug("Player is on Hypixel. Connecting to WebSocket...");
-                    return true;
+                    return shouldConnect;
                 } else {
                     LOGGER.debug("WebSocket connection canceled: Not on Hypixel.");
                     return false;
@@ -251,14 +263,19 @@ public class WebSocketHandler {
         }
     }
 
+    private boolean isOnHypixel() {
+        ServerData serverInfo = Minecraft.getInstance().getCurrentServer();
+        return serverInfo != null && serverInfo.ip != null && serverInfo.ip.contains("hypixel.net");
+    }
+
     private String getServerURL() {
         return getServerURL(Config.getToken());
     }
 
     private String getServerURL(String token) {
-        ClientPlayerEntity player = MinecraftClient.getInstance().player;
+        LocalPlayer player = Minecraft.getInstance().player;
         String username = player != null ? player.getName().getString() : "";
-        String uuid = player != null ? player.getUuidAsString() : "";
+        String uuid = player != null ? player.getStringUUID() : "";
 
         String serverUrl = Config.getURL().trim();
         while (serverUrl.endsWith("/")) {
@@ -315,6 +332,56 @@ public class WebSocketHandler {
         } else {
             return "§cDISCONNECTED§r" + (reconnectScheduled ? " §7(⟳ in a moment)§r" : "");
         }
+    }
+
+    public boolean isConnected() {
+        return webSocketClient != null && webSocketClient.isOpen();
+    }
+
+    public boolean canReconnectAfterGuildChatEnabled() {
+        return canStartConnection();
+    }
+
+    public synchronized void reconnectAfterGuildChatEnabled() {
+        announceNextConnect = true;
+        restartWebSocket();
+    }
+
+    private boolean canStartConnection() {
+        return canConnect() && shouldConnect();
+    }
+
+    public synchronized void handleConfigSaved(int previousGeneralMode, boolean wasBlockedByGuildChatToggle, boolean connectionSettingsChanged) {
+        int currentGeneralMode = Config.getGeneralMode();
+        boolean blockedByGuildChatToggle = Config.isBlockedByGuildChatToggle();
+
+        if (!connectionSettingsChanged && wasBlockedByGuildChatToggle == blockedByGuildChatToggle) {
+            return;
+        }
+
+        if (currentGeneralMode == 0) {
+            restartWebSocket();
+            return;
+        }
+
+        if (blockedByGuildChatToggle) {
+            if (previousGeneralMode == 0 || !wasBlockedByGuildChatToggle) {
+                RespectGuildToggleMessages.sendSettingMessage("Mode changed, but WebSocket remains paused because ", " is enabled.");
+            }
+            restartWebSocket();
+            return;
+        }
+
+        if (previousGeneralMode == 0 || wasBlockedByGuildChatToggle) {
+            if (canStartConnection()) {
+                MessageHandler.sendSystemMessage("Reconnecting to WebSocket...");
+                announceNextConnect = true;
+            }
+            restartWebSocket();
+            return;
+        }
+
+        restartWebSocket();
     }
 
     public synchronized void restartWebSocket() {

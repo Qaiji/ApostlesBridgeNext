@@ -2,12 +2,10 @@ package com.medua.apostlesbridgenext.util;
 
 import com.medua.apostlesbridgenext.client.ApostlesBridgeNextClient;
 import com.medua.apostlesbridgenext.handler.ImagePreviewHandler;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gl.RenderPipelines;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.texture.NativeImage;
-import net.minecraft.client.texture.NativeImageBackedTexture;
-import net.minecraft.util.Identifier;
+import com.mojang.blaze3d.platform.NativeImage;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.renderer.texture.DynamicTexture;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -31,13 +29,13 @@ import java.util.regex.Pattern;
 
 public final class ImagePreview {
     private static final Pattern META_IMAGE_PATTERN = Pattern.compile(
-            "<meta\\s+[^>]*(?:property|name)=[\"'](?:og:image|twitter:image)[\"'][^>]*content=[\"']([^\"']+)[\"'][^>]*>|" +
-                    "<meta\\s+[^>]*content=[\"']([^\"']+)[\"'][^>]*(?:property|name)=[\"'](?:og:image|twitter:image)[\"'][^>]*>",
-            Pattern.CASE_INSENSITIVE
+        "<meta\\s+[^>]*(?:property|name)=[\"'](?:og:image|twitter:image)[\"'][^>]*content=[\"']([^\"']+)[\"'][^>]*>|" +
+        "<meta\\s+[^>]*content=[\"']([^\"']+)[\"'][^>]*(?:property|name)=[\"'](?:og:image|twitter:image)[\"'][^>]*>",
+        Pattern.CASE_INSENSITIVE
     );
 
     private final String url;
-    private final Identifier textureId;
+    private final Object textureId;
     private volatile boolean loading;
     private volatile boolean failed;
     private volatile String failureReason = "Image preview failed";
@@ -48,10 +46,10 @@ public final class ImagePreview {
 
     public ImagePreview(String url) {
         this.url = url;
-        this.textureId = Identifier.of(ApostlesBridgeNextClient.MODID, "image_preview/" + sha1(url));
+        this.textureId = MinecraftReflectionUtil.createResourceId(ApostlesBridgeNextClient.MODID, "image_preview/" + sha1(url));
     }
 
-    public void load(MinecraftClient client) {
+    public void load(Minecraft client) {
         if (loading || failed || width > 0) {
             return;
         }
@@ -71,8 +69,8 @@ public final class ImagePreview {
                     videoLabel = result.videoLabel();
                     width = result.image().getWidth();
                     height = result.image().getHeight();
-                    NativeImageBackedTexture texture = new NativeImageBackedTexture(() -> url, result.image());
-                    client.getTextureManager().registerTexture(textureId, texture);
+                    DynamicTexture texture = new DynamicTexture(() -> url, result.image());
+                    registerTexture(client.getTextureManager(), textureId, texture);
                 } finally {
                     loading = false;
                 }
@@ -80,7 +78,7 @@ public final class ImagePreview {
         });
     }
 
-    public void render(DrawContext context, MinecraftClient client, int maxWidth, int maxHeight) {
+    public void render(Object context, Minecraft client, int maxWidth, int maxHeight) {
         int previewWidth = width;
         int previewHeight = height;
         if (failed) {
@@ -98,7 +96,7 @@ public final class ImagePreview {
         int scaledHeight = Math.max(1, Math.round(previewHeight * scale));
 
         drawFrame(context, scaledWidth, scaledHeight);
-        context.drawTexture(RenderPipelines.GUI_TEXTURED, textureId, ImagePreviewHandler.PADDING + 1, ImagePreviewHandler.PADDING + 1, 0, 0, scaledWidth, scaledHeight, previewWidth, previewHeight, previewWidth, previewHeight);
+        drawTexture(context, textureId, ImagePreviewHandler.PADDING + 1, ImagePreviewHandler.PADDING + 1, 0, 0, scaledWidth, scaledHeight, previewWidth, previewHeight, previewWidth, previewHeight);
         if (videoLabel != null) {
             drawBadge(context, client, videoLabel);
         } else if (gif) {
@@ -168,7 +166,7 @@ public final class ImagePreview {
             NativeImage image = new NativeImage(bufferedImage.getWidth(), bufferedImage.getHeight(), false);
             for (int y = 0; y < bufferedImage.getHeight(); y++) {
                 for (int x = 0; x < bufferedImage.getWidth(); x++) {
-                    image.setColorArgb(x, y, bufferedImage.getRGB(x, y));
+                    image.setPixel(x, y, bufferedImage.getRGB(x, y));
                 }
             }
             return image;
@@ -478,37 +476,65 @@ public final class ImagePreview {
         }
     }
 
-    private static void drawMessage(DrawContext context, MinecraftClient client, String message) {
-        int textWidth = client.textRenderer.getWidth(message);
-        drawFrame(context, textWidth + 8, client.textRenderer.fontHeight + 8);
-        context.drawTextWithShadow(client.textRenderer, message, ImagePreviewHandler.PADDING + 5, ImagePreviewHandler.PADDING + 5, ColorUtil.TEXT_WHITE);
+    private static void drawMessage(Object context, Minecraft client, String message) {
+        int textWidth = client.font.width(message);
+        drawFrame(context, textWidth + 8, client.font.lineHeight + 8);
+        drawText(context, client.font, message, ImagePreviewHandler.PADDING + 5, ImagePreviewHandler.PADDING + 5, ColorUtil.TEXT_WHITE, true);
     }
 
-    private static void drawGifBadge(DrawContext context, MinecraftClient client) {
+    private static void drawGifBadge(Object context, Minecraft client) {
         drawBadge(context, client, "GIF");
     }
 
-    private static void drawBadge(DrawContext context, MinecraftClient client, String label) {
+    private static void drawBadge(Object context, Minecraft client, String label) {
         int left = ImagePreviewHandler.PADDING + 4;
         int top = ImagePreviewHandler.PADDING + 4;
-        int right = left + client.textRenderer.getWidth(label) + 8;
-        int bottom = top + client.textRenderer.fontHeight + 5;
+        int right = left + client.font.width(label) + 8;
+        int bottom = top + client.font.lineHeight + 5;
 
-        context.fill(left, top, right, bottom, ColorUtil.DARK_PURPLE_BADGE);
-        context.drawTextWithShadow(client.textRenderer, label, left + 4, top + 3, ColorUtil.TEXT_WHITE);
+        fill(context, left, top, right, bottom, ColorUtil.DARK_PURPLE_BADGE);
+        drawText(context, client.font, label, left + 4, top + 3, ColorUtil.TEXT_WHITE, true);
     }
 
-    private static void drawFrame(DrawContext context, int width, int height) {
+    private static void drawFrame(Object context, int width, int height) {
         int left = ImagePreviewHandler.PADDING;
         int top = ImagePreviewHandler.PADDING;
         int right = left + width + 2;
         int bottom = top + height + 2;
 
-        context.fill(left, top, right, bottom, ColorUtil.IMAGE_PREVIEW_BACKGROUND);
-        context.drawHorizontalLine(left, right - 1, top, ColorUtil.DARK_PURPLE_BORDER);
-        context.drawHorizontalLine(left, right - 1, bottom - 1, ColorUtil.DARK_PURPLE_BORDER);
-        context.drawVerticalLine(left, top, bottom - 1, ColorUtil.DARK_PURPLE_BORDER);
-        context.drawVerticalLine(right - 1, top, bottom - 1, ColorUtil.DARK_PURPLE_BORDER);
+        fill(context, left, top, right, bottom, ColorUtil.IMAGE_PREVIEW_BACKGROUND);
+        horizontalLine(context, left, right - 1, top, ColorUtil.DARK_PURPLE_BORDER);
+        horizontalLine(context, left, right - 1, bottom - 1, ColorUtil.DARK_PURPLE_BORDER);
+        verticalLine(context, left, top, bottom - 1, ColorUtil.DARK_PURPLE_BORDER);
+        verticalLine(context, right - 1, top, bottom - 1, ColorUtil.DARK_PURPLE_BORDER);
+    }
+
+    private static void drawTexture(Object context, Object textureId, int x, int y, float u, float v, int width, int height, int regionWidth, int regionHeight, int textureWidth, int textureHeight) {
+        MinecraftReflectionUtil.invokeAny(context, new String[]{"blit", "drawTexture"},
+            new Class<?>[]{RenderPipelines.GUI_TEXTURED.getClass(), textureId.getClass(), int.class, int.class, float.class, float.class, int.class, int.class, int.class, int.class, int.class, int.class},
+            RenderPipelines.GUI_TEXTURED, textureId, x, y, u, v, width, height, regionWidth, regionHeight, textureWidth, textureHeight);
+    }
+
+    private static void drawText(Object context, Object font, String text, int x, int y, int color, boolean shadow) {
+        MinecraftReflectionUtil.invokeAny(context, new String[]{"text", "drawString", "drawText"},
+            new Class<?>[]{font.getClass(), String.class, int.class, int.class, int.class, boolean.class},
+            font, text, x, y, color, shadow);
+    }
+
+    private static void fill(Object context, int left, int top, int right, int bottom, int color) {
+        MinecraftReflectionUtil.invokeAny(context, "fill", new Class<?>[]{int.class, int.class, int.class, int.class, int.class}, left, top, right, bottom, color);
+    }
+
+    private static void horizontalLine(Object context, int left, int right, int y, int color) {
+        MinecraftReflectionUtil.invokeAny(context, new String[]{"horizontalLine", "hLine", "drawHorizontalLine"}, new Class<?>[]{int.class, int.class, int.class, int.class}, left, right, y, color);
+    }
+
+    private static void verticalLine(Object context, int x, int top, int bottom, int color) {
+        MinecraftReflectionUtil.invokeAny(context, new String[]{"verticalLine", "vLine", "drawVerticalLine"}, new Class<?>[]{int.class, int.class, int.class, int.class}, x, top, bottom, color);
+    }
+
+    private static void registerTexture(Object textureManager, Object textureId, DynamicTexture texture) {
+        MinecraftReflectionUtil.invokeAny(textureManager, "register", new Class<?>[]{textureId.getClass(), texture.getClass()}, textureId, texture);
     }
 
     private static String sha1(String value) {
@@ -525,6 +551,5 @@ public final class ImagePreview {
         }
     }
 
-    private record DownloadResult(NativeImage image, String error, boolean gif, String videoLabel) {
-    }
+    private record DownloadResult(NativeImage image, String error, boolean gif, String videoLabel) { }
 }

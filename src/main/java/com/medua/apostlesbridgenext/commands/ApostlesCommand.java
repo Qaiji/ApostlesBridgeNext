@@ -6,11 +6,14 @@ import com.medua.apostlesbridgenext.handler.MessageHandler;
 import com.medua.apostlesbridgenext.types.IgnoredType;
 import com.medua.apostlesbridgenext.util.ConfigUtil;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
+import com.mojang.brigadier.arguments.ArgumentType;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
+import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.Screen;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -18,7 +21,6 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ApostlesCommand {
-
     static final String COMMAND_NAME = "apostles";
     static final List<String> COMMAND_ALIASES = new ArrayList<>(List.of(COMMAND_NAME, "apostlesbridge", "bridge"));
 
@@ -34,42 +36,42 @@ public class ApostlesCommand {
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
             for (String alias : allCommands) {
                 dispatcher.register(
-                    ClientCommandManager.literal(alias)
+                    literal(alias)
                         // /bridge reconnect
-                        .then(ClientCommandManager.literal("reconnect")
+                        .then(literal("reconnect")
                             .executes(context -> {
                                 proceedCommand(apostlesBridge, alias, new String[]{"reconnect"});
                                 return 1;
                             }))
                         // /bridge status
-                        .then(ClientCommandManager.literal("status")
+                        .then(literal("status")
                             .executes(context -> {
                                 proceedCommand(apostlesBridge, alias, new String[]{"status"});
                                 return 1;
                             }))
                         // /bridge debug [message and urls]
-                        .then(ClientCommandManager.literal("debug")
+                        .then(literal("debug")
                             .executes(context -> {
                                 proceedCommand(apostlesBridge, alias, new String[]{"debug"});
                                 return 1;
                             })
-                            .then(ClientCommandManager.argument("urls", StringArgumentType.greedyString())
+                            .then(argument("urls", StringArgumentType.greedyString())
                                 .executes(context -> {
                                     String urls = StringArgumentType.getString(context, "urls");
                                     proceedCommand(apostlesBridge, alias, new String[]{"debug", urls});
                                     return 1;
                                 })))
                         // /bridge disconnect
-                        .then(ClientCommandManager.literal("disconnect")
+                        .then(literal("disconnect")
                                 .executes(context -> {
                                     proceedCommand(apostlesBridge, alias, new String[]{"disconnect"});
                                     return 1;
                                 }))
                         // /bridge ignore <add|remove|list> [player|origin] [name]
-                        .then(ClientCommandManager.literal("ignore")
-                            .then(ClientCommandManager.literal("add")
-                                .then(ClientCommandManager.literal("player")
-                                    .then(ClientCommandManager.argument("name", StringArgumentType.word())
+                        .then(literal("ignore")
+                            .then(literal("add")
+                                .then(literal("player")
+                                    .then(argument("name", StringArgumentType.word())
                                         .suggests((context, builder) -> {
                                             // TODO: add player suggestion
                                             return builder.buildFuture();
@@ -81,8 +83,8 @@ public class ApostlesCommand {
                                         })
                                     )
                                 )
-                                .then(ClientCommandManager.literal("origin")
-                                    .then(ClientCommandManager.argument("name", StringArgumentType.word())
+                                .then(literal("origin")
+                                    .then(argument("name", StringArgumentType.word())
                                         .suggests((context, builder) -> {
                                             // TODO: add player suggestion
                                             return builder.buildFuture();
@@ -95,9 +97,9 @@ public class ApostlesCommand {
                                     )
                                 )
                             )
-                            .then(ClientCommandManager.literal("remove")
-                                .then(ClientCommandManager.literal("player")
-                                    .then(ClientCommandManager.argument("name", StringArgumentType.word())
+                            .then(literal("remove")
+                                .then(literal("player")
+                                    .then(argument("name", StringArgumentType.word())
                                         .suggests((context, builder) -> {
                                             // TODO: add player suggestion
                                             return builder.buildFuture();
@@ -109,8 +111,8 @@ public class ApostlesCommand {
                                         })
                                     )
                                 )
-                                .then(ClientCommandManager.literal("origin")
-                                    .then(ClientCommandManager.argument("name", StringArgumentType.word())
+                                .then(literal("origin")
+                                    .then(argument("name", StringArgumentType.word())
                                         .suggests((context, builder) -> {
                                             // TODO: add origin suggestion
                                             return builder.buildFuture();
@@ -123,7 +125,7 @@ public class ApostlesCommand {
                                     )
                                 )
                             )
-                            .then(ClientCommandManager.literal("list")
+                            .then(literal("list")
                                 .executes(context -> {
                                     proceedCommand(apostlesBridge, alias, new String[]{"ignore", "list"});
                                     return 1;
@@ -131,7 +133,7 @@ public class ApostlesCommand {
                             )
                         )
                         // /bridge help
-                        .then(ClientCommandManager.literal("help")
+                        .then(literal("help")
                             .executes(context -> {
                                 proceedCommand(apostlesBridge, alias, new String[]{"help"});
                                 return 1;
@@ -146,11 +148,19 @@ public class ApostlesCommand {
         });
     }
 
+    private static LiteralArgumentBuilder<FabricClientCommandSource> literal(String name) {
+        return LiteralArgumentBuilder.literal(name);
+    }
+
+    private static <T> RequiredArgumentBuilder<FabricClientCommandSource, T> argument(String name, ArgumentType<T> type) {
+        return RequiredArgumentBuilder.argument(name, type);
+    }
+
     public static void openScreenNextTick(Screen screen) {
         AtomicBoolean opened = new AtomicBoolean(false);
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (!opened.get()) {
-                MinecraftClient.getInstance().setScreen(screen);
+                Minecraft.getInstance().setScreen(screen);
                 opened.set(true);
             }
         });
@@ -158,7 +168,7 @@ public class ApostlesCommand {
 
     public static boolean proceedCommand(ApostlesBridgeNextClient apostlesBridge, String command, String[] args) {
         if (args.length == 0) {
-            openScreenNextTick(ConfigGuiManager.openConfigGui());
+            openScreenNextTick(ConfigGuiManager.openConfigGui(apostlesBridge));
             return true;
         } else if (args.length > 1 && args[0].equalsIgnoreCase("debug")) {
             sendDebugMessage(parseDebugMessage(String.join(" ", Arrays.copyOfRange(args, 1, args.length))));

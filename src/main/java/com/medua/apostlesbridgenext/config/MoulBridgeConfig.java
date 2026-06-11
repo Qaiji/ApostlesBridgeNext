@@ -71,6 +71,11 @@ public class MoulBridgeConfig extends Config {
         public int generalMode = 1;
 
         @Expose
+        @ConfigOption(name = "Respect /g toggle", desc = "Pause the bridge when guild chat is disabled via /g toggle")
+        @ConfigEditorBoolean
+        public boolean respectGuildChatToggle = true;
+
+        @Expose
         @ConfigOption(name = "Image Preview Size", desc = "Default size for hovered image previews")
         @ConfigEditorDropdown(values = {
                 "XS",

@@ -1,10 +1,14 @@
 plugins {
-    id 'fabric-loom'
+    id 'fabric-loom' apply false
+    id 'net.fabricmc.fabric-loom' apply false
     id 'com.gradleup.shadow' version '8.3.5'
     id 'maven-publish'
     id 'org.jetbrains.kotlin.jvm' version '2.0.0'
     id 'dev.kikugie.stonecutter'
 }
+
+def usesOfficialNamedRuntime = project.minecraft_version.toString().startsWith("26.")
+apply plugin: usesOfficialNamedRuntime ? 'net.fabricmc.fabric-loom' : 'fabric-loom'
 
 version = project.mod_version
 group = project.maven_group
@@ -46,19 +50,44 @@ repositories {
 dependencies {
     // To change the versions see the gradle.properties file
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
-    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
-    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    if (!usesOfficialNamedRuntime) {
+        mappings loom.officialMojangMappings()
+    }
 
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
-    modImplementation "org.notenoughupdates.moulconfig:modern-${project.property("moulconfig_version")}"
-    include "org.notenoughupdates.moulconfig:modern-${project.property("moulconfig_version")}"
+    def fabricDependencyConfiguration = usesOfficialNamedRuntime ? "implementation" : "modImplementation"
+    add(fabricDependencyConfiguration, "net.fabricmc:fabric-loader:${project.loader_version}")
+    add(fabricDependencyConfiguration, "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}")
+
+    def moulConfig = dependencies.add(fabricDependencyConfiguration, "org.notenoughupdates.moulconfig:modern-${project.property("moulconfig_version")}")
+    include moulConfig
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib:2.0.0"
     include "org.jetbrains.kotlin:kotlin-stdlib:2.0.0"
 
-    implementation "org.java-websocket:Java-WebSocket:1.5.4"
-    compileOnly "org.java-websocket:Java-WebSocket:1.5.4"
-    shadowRuntime "org.java-websocket:Java-WebSocket:1.5.4"
+    if (usesOfficialNamedRuntime) {
+        include implementation("org.java-websocket:Java-WebSocket:1.5.4")
+    } else {
+        implementation "org.java-websocket:Java-WebSocket:1.5.4"
+        compileOnly "org.java-websocket:Java-WebSocket:1.5.4"
+        shadowRuntime "org.java-websocket:Java-WebSocket:1.5.4"
+    }
+
+    testImplementation "org.junit.jupiter:junit-jupiter:5.10.3"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+}
+
+if (usesOfficialNamedRuntime) {
+    loom {
+        mods {
+            fabricApi {
+                dependency project.dependencies.create("net.fabricmc.fabric-api:fabric-api:${project.fabric_version}")
+            }
+        }
+    }
+}
+
+test {
+    useJUnitPlatform()
 }
 
 tasks.named('shadowJar') {
@@ -70,11 +99,14 @@ tasks.named('shadowJar') {
 processResources {
     def modVersion = project.version
     def mcVersion = project.minecraft_version
+    def mcDependency = project.findProperty("minecraft_dependency") ?: mcVersion
+    def fabricDependency = project.findProperty("fabric_dependency") ?: "fabric"
     def loaderVersion = project.loader_version
     def modId = project.mod_id
 
     inputs.property "version", modVersion
-    inputs.property "minecraft_version", mcVersion
+    inputs.property "minecraft_version", mcDependency
+    inputs.property "fabric_dependency", fabricDependency
     inputs.property "loader_version", loaderVersion
     inputs.property "mod_id", modId
 
@@ -82,13 +114,14 @@ processResources {
 
     filesMatching("fabric.mod.json") {
         expand "version": modVersion,
-                "minecraft_version": mcVersion,
+                "minecraft_version": mcDependency,
+                "fabric_dependency": fabricDependency,
                 "loader_version": loaderVersion,
                 "mod_id": modId
     }
 }
 
-def targetJavaVersion = 21
+def targetJavaVersion = (project.findProperty("target_java_version") ?: "21").toString().toInteger()
 tasks.withType(JavaCompile).configureEach {
     // ensure that the encoding is set to UTF-8, no matter what the system default is
     // this fixes some edge cases with special characters not displaying correctly
@@ -123,9 +156,39 @@ tasks.withType(AbstractArchiveTask).configureEach {
     archiveVersion.set("${project.mod_version}${archiveVersionSuffix}")
 }
 
-tasks.named('remapJar') {
+tasks.matching { it.name == 'remapJar' }.configureEach {
     dependsOn tasks.named('shadowJar')
     input.set(tasks.named('shadowJar').get().archiveFile)
+}
+
+if (project.name == "1.21.10") {
+    def collectReleaseJars = tasks.register("collectReleaseJars", Copy) {
+        group = "build"
+        description = "Collects final release jars from all Stonecutter versions."
+
+        into rootProject.layout.buildDirectory.dir("release")
+        includeEmptyDirs = false
+    }
+
+    gradle.projectsEvaluated {
+        def versionProjects = rootProject.subprojects.findAll { it.tasks.findByName("build") != null }
+
+        collectReleaseJars.configure {
+            dependsOn versionProjects.collect { it.tasks.named("build") }
+
+            versionProjects.each { versionProject ->
+                from(versionProject.layout.buildDirectory.dir("libs")) {
+                    include "*.jar"
+                    exclude "*-sources.jar"
+                    exclude "*-dev-shadow.jar"
+                }
+            }
+        }
+
+        tasks.named("build").configure {
+            finalizedBy collectReleaseJars
+        }
+    }
 }
 
 def generatedSrcDir = layout.buildDirectory.dir("generated/sources/buildConfig/java/main")

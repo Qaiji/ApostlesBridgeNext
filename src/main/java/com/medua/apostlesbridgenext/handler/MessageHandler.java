@@ -4,10 +4,12 @@ import com.medua.apostlesbridgenext.client.ApostlesBridgeNextClient;
 import com.medua.apostlesbridgenext.config.Config;
 import com.medua.apostlesbridgenext.types.LinkPreviewType;
 import com.medua.apostlesbridgenext.util.EmojiUtil;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.text.ClickEvent;
-import net.minecraft.text.HoverEvent;
-import net.minecraft.text.Text;
+import com.medua.apostlesbridgenext.util.MinecraftReflectionUtil;
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.HoverEvent;
+import net.minecraft.network.chat.MutableComponent;
 
 import java.net.URI;
 import java.util.List;
@@ -28,14 +30,14 @@ public class MessageHandler {
         return (brackets ? "\u00A7r[" : "") + (colors ? "\u00A75" : "\u00A7r") + MOD_PREFIX + "\u00A7r" + (brackets ? "] " : " > ");
     }
 
-    public static void sendMessage(Text message) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (!client.isOnThread()) {
+    public static void sendMessage(Component message) {
+        Minecraft client = Minecraft.getInstance();
+        if (!client.isSameThread()) {
             client.execute(() -> sendMessage(message));
             return;
         }
 
-        MinecraftClient.getInstance().inGameHud.getChatHud().addMessage(message);
+        addChatMessage(Minecraft.getInstance().gui.getChat(), message);
     }
 
     public static void sendMessage(String message) {
@@ -46,13 +48,17 @@ public class MessageHandler {
         sendMessage(getTextForMessage(message, prefix));
     }
 
+    public static void sendSystemMessage(String message) {
+        sendMessage(Component.literal(getPrefix(true, true)).append(Component.literal(message)));
+    }
+
     public static void sendMessageWithLinks(String message, boolean prefix, List<String> urls) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (!client.isOnThread()) {
+        Minecraft client = Minecraft.getInstance();
+        if (!client.isSameThread()) {
             client.execute(() -> sendMessageWithLinks(message, prefix, urls));
             return;
         }
-        Text messageComponent = getTextForMessage(message, prefix);
+        MutableComponent messageComponent = getTextForMessage(message, prefix);
 
         if (!urls.isEmpty()) {
             messageComponent = messageComponent.copy().append(" ");
@@ -82,16 +88,14 @@ public class MessageHandler {
                 }
 
                 LinkPreviewType finalPreviewType = previewType;
-                Text imageComponent = Text.literal(label)
-                        .styled(style -> {
-                            style = style
-                                    .withClickEvent(new ClickEvent.OpenUrl(URI.create(url)))
-                                    .withHoverEvent(new HoverEvent.ShowText(Text.literal(hoverText)));
-                            if (finalPreviewType == LinkPreviewType.IMAGE) {
-                                style = style.withInsertion(ImagePreviewHandler.IMAGE_PREVIEW_INSERTION + url);
-                            }
-                            return style;
-                        });
+                Component imageComponent = Component.literal(label).withStyle(style -> {
+                    style = style.withClickEvent(new ClickEvent.OpenUrl(URI.create(url)))
+                        .withHoverEvent(new HoverEvent.ShowText(Component.literal(hoverText)));
+                    if (finalPreviewType == LinkPreviewType.IMAGE) {
+                        style = style.withInsertion(ImagePreviewHandler.IMAGE_PREVIEW_INSERTION + url);
+                    }
+                    return style;
+                });
 
                 messageComponent = messageComponent.copy().append(imageComponent);
             }
@@ -100,12 +104,12 @@ public class MessageHandler {
         sendMessage(messageComponent);
     }
 
-    private static Text getTextForMessage(String message) {
+    private static MutableComponent getTextForMessage(String message) {
         return getTextForMessage(message, true);
     }
 
-    private static Text getTextForMessage(String message, boolean prefix) {
-        Text baseMessage = Text.literal((prefix ? getPrefix() : "") + "\u00A7r");
+    private static MutableComponent getTextForMessage(String message, boolean prefix) {
+        MutableComponent baseMessage = Component.literal((prefix ? getPrefix() : "") + "\u00A7r");
         if (Config.isEmojiConversionEnabled()) {
             return baseMessage.copy().append(EmojiUtil.replaceShortcodesWithFont(message));
         }
@@ -114,6 +118,10 @@ public class MessageHandler {
 
     public static void sendSpacerMessage() {
         sendMessage("=====================================================", false);
+    }
+
+    private static void addChatMessage(Object chat, Component message) {
+        MinecraftReflectionUtil.invokeAny(chat, new String[]{"addClientSystemMessage", "addMessage"}, new Class<?>[]{Component.class}, message);
     }
 
 }

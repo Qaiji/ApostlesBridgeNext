@@ -8,8 +8,7 @@ public final class ColorUtil {
     public static final int DARK_PURPLE_BORDER = 0xFF4B1A78;
     public static final int DARK_PURPLE_BADGE = 0xD04B1A78;
 
-    private ColorUtil() {
-    }
+    private ColorUtil() { }
 
     public static MinecraftColor minecraftColor(int index) {
         MinecraftColor[] colors = MinecraftColor.values();
