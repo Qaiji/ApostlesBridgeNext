@@ -12,6 +12,7 @@ import com.medua.apostlesbridgenext.config.Ignored;
 import com.medua.apostlesbridgenext.handler.MessageHandler;
 import com.medua.apostlesbridgenext.types.IgnoredType;
 import com.medua.apostlesbridgenext.util.ConfigUtil;
+import com.medua.apostlesbridgenext.util.MinecraftReflectionUtil;
 import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -125,10 +126,20 @@ public class ApostlesCommand {
         AtomicBoolean opened = new AtomicBoolean(false);
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (!opened.get()) {
-                Minecraft.getInstance().setScreen(screen);
+                setScreen(Minecraft.getInstance(), screen);
                 opened.set(true);
             }
         });
+    }
+
+    private static void setScreen(Minecraft client, Screen screen) {
+        if (MinecraftReflectionUtil.invokeAny(client, "setScreen", new Class<?>[] { Screen.class }, screen)) {
+            return;
+        }
+
+        if (!MinecraftReflectionUtil.invokeAny(client.gui, "setScreen", new Class<?>[] { Screen.class }, screen)) {
+            throw new IllegalStateException("Unable to open screen");
+        }
     }
 
     public static boolean proceedCommand(ApostlesBridgeNextClient apostlesBridge, String command, String[] args) {

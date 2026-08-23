@@ -14,6 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.medua.apostlesbridgenext.config.Config;
 import com.medua.apostlesbridgenext.util.ImagePreview;
+import com.medua.apostlesbridgenext.util.MinecraftReflectionUtil;
 
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.fabric.api.event.Event;
@@ -145,9 +146,10 @@ public final class ImagePreviewHandler {
 
     private static Style getLegacyHoveredStyle(Minecraft client, int mouseX, int mouseY) {
         try {
-            Method method = getDeclaredMethod(client.gui.getChat().getClass(), new String[] { "getTextStyleAt", "method_1816" }, double.class, double.class);
+            Object chat = MinecraftReflectionUtil.getChatHud(client);
+            Method method = getDeclaredMethod(chat.getClass(), new String[] { "getTextStyleAt", "method_1816" }, double.class, double.class);
             method.setAccessible(true);
-            return (Style) method.invoke(client.gui.getChat(), (double) mouseX, (double) mouseY);
+            return (Style) method.invoke(chat, (double) mouseX, (double) mouseY);
         } catch (ReflectiveOperationException | RuntimeException exception) {
             return null;
         }
@@ -166,10 +168,11 @@ public final class ImagePreviewHandler {
             insertMethod.setAccessible(true);
             clickHandler = insertMethod.invoke(clickHandler, true);
 
-            Method renderMethod = getDeclaredMethod(client.gui.getChat().getClass(), new String[] { "captureClickableText", "render",
+            Object chat = MinecraftReflectionUtil.getChatHud(client);
+            Method renderMethod = getDeclaredMethod(chat.getClass(), new String[] { "captureClickableText", "render",
                 "method_75803" }, consumerClass, int.class, int.class, boolean.class);
             renderMethod.setAccessible(true);
-            renderMethod.invoke(client.gui.getChat(), clickHandler, client.getWindow().getGuiScaledHeight(), client.gui.getGuiTicks(), true);
+            renderMethod.invoke(chat, clickHandler, client.getWindow().getGuiScaledHeight(), MinecraftReflectionUtil.getGuiTicks(client), true);
 
             Method getStyleMethod = getDeclaredMethod(clickHandlerClass, new String[] { "result", "getStyle", "method_75777" });
             getStyleMethod.setAccessible(true);
