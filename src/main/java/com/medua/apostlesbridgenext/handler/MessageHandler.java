@@ -44,7 +44,7 @@ public class MessageHandler {
             return;
         }
 
-        addChatMessage(Minecraft.getInstance().gui.getChat(), message);
+        addChatMessage(MinecraftReflectionUtil.getChatHud(Minecraft.getInstance()), message);
     }
 
     public static void sendMessage(String message) {

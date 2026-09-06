@@ -2,7 +2,7 @@
 
 [![Modrinth Version](https://img.shields.io/modrinth/v/apostlesbridgenext?logo=modrinth&label=Modrinth)](https://modrinth.com/mod/apostlesbridgenext)
 [![Modrinth Downloads](https://img.shields.io/modrinth/dt/apostlesbridgenext?logo=modrinth&label=downloads)](https://modrinth.com/mod/apostlesbridgenext)
-[![Minecraft](https://img.shields.io/badge/Minecraft-1.21.10%20%7C%201.21.11%20%7C%2026.1.x-62B47A)](#supported-versions)
+[![Minecraft](https://img.shields.io/badge/Minecraft-26.1.x%20%7C%2026.2-62B47A)](#supported-versions)
 [![Fabric](https://img.shields.io/badge/loader-Fabric-DBD0B4)](https://fabricmc.net/)
 [![Environment](https://img.shields.io/badge/environment-client--side-blue)](#requirements)
 
@@ -20,11 +20,10 @@ ApostlesBridgeNext is the modern Fabric successor to [Qaiji/ApostlesBridge](http
 
 | Minecraft version | Build target | Notes |
 | --- | --- | --- |
-| `1.21.10` | `mc1.21.10` | Supported |
-| `1.21.11` | `mc1.21.11` | Supported |
 | `26.1.x` | `mc26.1` | Tested on `26.1.1` and `26.1.2` |
+| `26.2` | `mc26.2` | Supported |
 
-Use the JAR that matches your Minecraft version. The `mc26.1` build is intended for the `26.1.x` line.
+Use the JAR that matches your Minecraft version. The `mc26.1` build is intended for the `26.1.x` line, and the `mc26.2` build is intended for `26.2`.
 
 ApostlesBridgeNext support follows the Minecraft versions that are useful for playing on Hypixel. Older build targets may be removed once Hypixel rotates them out of its supported version range.
 
@@ -72,9 +71,8 @@ Bridge connection details such as the WebSocket URL and token are provided throu
 
 | Minecraft version | Java | Fabric Loader | Fabric API |
 | --- | --- | --- | --- |
-| `1.21.10` | Java 21 | `0.18.4+` | Required |
-| `1.21.11` | Java 21 | `0.18.4+` | Required |
 | `26.1.x` | Java 25 | `0.19.1+` | Required |
+| `26.2` | Java 25 | `0.19.3+` | Required |
 
 This is a client-side mod.
 
@@ -91,7 +89,7 @@ Open `/bridge` in game to configure the mod. Settings are saved automatically to
 To build and collect all configured Minecraft targets locally:
 
 ```bash
-./gradlew :1.21.10:collectReleaseJars
+./gradlew :26.1:collectReleaseJars
 ```
 
 Final release JARs are collected in `build/release`.

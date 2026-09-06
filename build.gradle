@@ -170,7 +170,7 @@ tasks.matching { it.name == 'remapJar' }.configureEach {
     input.set(tasks.named('shadowJar').get().archiveFile)
 }
 
-if (project.name == "1.21.10") {
+if (project.name == "26.1") {
     def collectReleaseJars = tasks.register("collectReleaseJars", Copy) {
         group = "build"
         description = "Collects final release jars from all Stonecutter versions."
