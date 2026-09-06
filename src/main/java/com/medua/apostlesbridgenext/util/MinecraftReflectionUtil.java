@@ -1,10 +1,7 @@
 package com.medua.apostlesbridgenext.util;
 
 import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-
-import net.minecraft.client.Minecraft;
 
 public final class MinecraftReflectionUtil {
     private MinecraftReflectionUtil() { }
@@ -52,66 +49,6 @@ public final class MinecraftReflectionUtil {
             return constructor.newInstance(args);
         }
         throw new NoSuchMethodException(targetClass.getName());
-    }
-
-    public static Object getChatHud(Minecraft client) {
-        Object chat = invokeNoArgs(client.gui, "getChat");
-        if (chat != null) {
-            return chat;
-        }
-
-        Object hud = getField(client.gui, "hud");
-        chat = invokeNoArgs(hud, "getChat");
-        if (chat != null) {
-            return chat;
-        }
-
-        throw new IllegalStateException("Unable to get chat hud");
-    }
-
-    public static int getGuiTicks(Minecraft client) {
-        Object ticks = invokeNoArgs(client.gui, "getGuiTicks");
-        if (ticks instanceof Integer guiTicks) {
-            return guiTicks;
-        }
-
-        Object hud = getField(client.gui, "hud");
-        ticks = invokeNoArgs(hud, "getGuiTicks");
-        if (ticks instanceof Integer hudTicks) {
-            return hudTicks;
-        }
-
-        return 0;
-    }
-
-    public static Object getField(Object target, String... fieldNames) {
-        if (target == null) {
-            return null;
-        }
-
-        for (String fieldName : fieldNames) {
-            try {
-                Field field = target.getClass().getField(fieldName);
-                return field.get(target);
-            } catch (ReflectiveOperationException | RuntimeException ignored) {
-            }
-        }
-        return null;
-    }
-
-    public static Object invokeNoArgs(Object target, String... methodNames) {
-        if (target == null) {
-            return null;
-        }
-
-        for (String methodName : methodNames) {
-            try {
-                Method method = target.getClass().getMethod(methodName);
-                return method.invoke(target);
-            } catch (ReflectiveOperationException | RuntimeException ignored) {
-            }
-        }
-        return null;
     }
 
     public static Class<?> forName(String... classNames) {

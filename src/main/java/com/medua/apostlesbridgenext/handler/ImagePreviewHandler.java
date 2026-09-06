@@ -14,7 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.medua.apostlesbridgenext.config.Config;
 import com.medua.apostlesbridgenext.util.ImagePreview;
-import com.medua.apostlesbridgenext.util.MinecraftReflectionUtil;
+import com.medua.apostlesbridgenext.util.MinecraftClientCompat;
 
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.fabric.api.event.Event;
@@ -146,7 +146,7 @@ public final class ImagePreviewHandler {
 
     private static Style getLegacyHoveredStyle(Minecraft client, int mouseX, int mouseY) {
         try {
-            Object chat = MinecraftReflectionUtil.getChatHud(client);
+            Object chat = MinecraftClientCompat.getChat(client);
             Method method = getDeclaredMethod(chat.getClass(), new String[] { "getTextStyleAt", "method_1816" }, double.class, double.class);
             method.setAccessible(true);
             return (Style) method.invoke(chat, (double) mouseX, (double) mouseY);
@@ -168,11 +168,8 @@ public final class ImagePreviewHandler {
             insertMethod.setAccessible(true);
             clickHandler = insertMethod.invoke(clickHandler, true);
 
-            Object chat = MinecraftReflectionUtil.getChatHud(client);
-            Method renderMethod = getDeclaredMethod(chat.getClass(), new String[] { "captureClickableText", "render",
-                "method_75803" }, consumerClass, int.class, int.class, boolean.class);
-            renderMethod.setAccessible(true);
-            renderMethod.invoke(chat, clickHandler, client.getWindow().getGuiScaledHeight(), MinecraftReflectionUtil.getGuiTicks(client), true);
+            Object chat = MinecraftClientCompat.getChat(client);
+            captureClickableText(chat, clickHandler, consumerClass, client.getWindow().getGuiScaledHeight(), MinecraftClientCompat.getGuiTicks(client));
 
             Method getStyleMethod = getDeclaredMethod(clickHandlerClass, new String[] { "result", "getStyle", "method_75777" });
             getStyleMethod.setAccessible(true);
@@ -180,6 +177,24 @@ public final class ImagePreviewHandler {
         } catch (ReflectiveOperationException | RuntimeException exception) {
             return null;
         }
+    }
+
+    private static void captureClickableText(Object chat, Object clickHandler, Class<?> consumerClass, int height, int ticks)
+            throws ReflectiveOperationException {
+        try {
+            Class<?> displayModeClass = Class.forName("net.minecraft.client.gui.components.ChatComponent$DisplayMode");
+            Method method = getDeclaredMethod(chat.getClass(), new String[] { "captureClickableText", "render", "method_75803" },
+                consumerClass, int.class, int.class, displayModeClass);
+            method.setAccessible(true);
+            method.invoke(chat, clickHandler, height, ticks, displayModeClass.getField("FOREGROUND").get(null));
+            return;
+        } catch (ClassNotFoundException | NoSuchMethodException ignored) {
+        }
+
+        Method method = getDeclaredMethod(chat.getClass(), new String[] { "captureClickableText", "render", "method_75803" },
+            consumerClass, int.class, int.class, boolean.class);
+        method.setAccessible(true);
+        method.invoke(chat, clickHandler, height, ticks, true);
     }
 
     private static Class<?> forName(String... classNames) throws ClassNotFoundException {

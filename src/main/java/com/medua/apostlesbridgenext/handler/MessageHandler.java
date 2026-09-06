@@ -7,6 +7,7 @@ import com.medua.apostlesbridgenext.client.ApostlesBridgeNextClient;
 import com.medua.apostlesbridgenext.config.Config;
 import com.medua.apostlesbridgenext.types.LinkPreviewType;
 import com.medua.apostlesbridgenext.util.EmojiUtil;
+import com.medua.apostlesbridgenext.util.MinecraftClientCompat;
 import com.medua.apostlesbridgenext.util.MinecraftReflectionUtil;
 
 import net.minecraft.client.Minecraft;
@@ -44,7 +45,7 @@ public class MessageHandler {
             return;
         }
 
-        addChatMessage(MinecraftReflectionUtil.getChatHud(Minecraft.getInstance()), message);
+        addChatMessage(MinecraftClientCompat.getChat(client), message);
     }
 
     public static void sendMessage(String message) {

@@ -171,7 +171,7 @@ tasks.matching { it.name == 'remapJar' }.configureEach {
 }
 
 if (project.name == "26.1") {
-    def collectReleaseJars = tasks.register("collectReleaseJars", Copy) {
+    def collectReleaseJars = tasks.register("collectReleaseJars", Sync) {
         group = "build"
         description = "Collects final release jars from all Stonecutter versions."
 
@@ -187,7 +187,7 @@ if (project.name == "26.1") {
 
             versionProjects.each { versionProject ->
                 from(versionProject.layout.buildDirectory.dir("libs")) {
-                    include "*.jar"
+                    include "ApostlesBridgeNext-*.jar"
                     exclude "*-sources.jar"
                     exclude "*-dev-shadow.jar"
                 }
